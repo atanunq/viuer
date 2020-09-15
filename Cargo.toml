@@ -1,0 +1,12 @@
+[package]
+name = "viuer"
+version = "0.1.0"
+authors = ["atanunq <atanas.yankov98@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+termcolor = "1.1"
+crossterm = "0.17"
+ansi_colours = "1.0"
+image = "0.23"
+libc = "0.2"
