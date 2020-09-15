@@ -1,6 +1,6 @@
+use crate::error::{ViuError, ViuResult};
 use crate::printer::Printer;
 use crate::Config;
-use crate::{ViuError, ViuResult};
 
 use ansi_colours::ansi256_from_rgb;
 use image::{DynamicImage, GenericImageView, Rgba};
