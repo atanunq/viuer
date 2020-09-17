@@ -12,9 +12,9 @@ use printer::Printer;
 /// Default printing method. Uses upper and lower half blocks to fill
 /// terminal cells.
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
-    //TODO: width and height logic
+    let resized_img = resize(&img, &config);
     //TODO: logic to choose printer (Sixel, etc.)
-    printer::BlockPrinter::print(img, config)
+    printer::BlockPrinter::print(&resized_img, config)
 }
 
 pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
@@ -25,7 +25,7 @@ pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     print(&resized_img, config)
 }
 
-fn resize(img: &DynamicImage, config: &Config) -> DynamicImage {
+pub fn resize(img: &DynamicImage, config: &Config) -> DynamicImage {
     let new_img;
     let (width, height) = img.dimensions();
     let (mut print_width, mut print_height) = (width, height);
