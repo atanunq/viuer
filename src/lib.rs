@@ -1,4 +1,3 @@
-use crossterm::terminal;
 use error::ViuResult;
 use image::{DynamicImage, GenericImageView};
 
@@ -40,17 +39,7 @@ fn resize(img: &DynamicImage, config: &Config) -> DynamicImage {
     }
     match (config.width, config.height) {
         (None, None) => {
-            let size;
-            match terminal::size() {
-                Ok(s) => {
-                    size = s;
-                }
-                Err(_) => {
-                    //If getting terminal size fails, fall back to some default size
-                    size = (100, 40);
-                }
-            }
-            let (term_w, term_h) = size;
+            let (term_w, term_h) = utils::terminal_size();
             let w = u32::from(term_w);
             //One less row because two reasons:
             // - the prompt after executing the command will take a line
@@ -77,4 +66,103 @@ fn resize(img: &DynamicImage, config: &Config) -> DynamicImage {
     new_img
 }
 
-//TODO: resize tests :)
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Config;
+    use image::DynamicImage;
+
+    fn get_large_test_image() -> DynamicImage {
+        DynamicImage::ImageRgba8(image::RgbaImage::new(1000, 800))
+    }
+
+    fn get_small_test_image() -> DynamicImage {
+        DynamicImage::ImageRgba8(image::RgbaImage::new(20, 10))
+    }
+
+    #[test]
+    fn test_resize_none() {
+        let config = Config {
+            width: None,
+            height: None,
+            ..Default::default()
+        };
+
+        let img = get_large_test_image();
+        let new_img = resize(&img, &config);
+        assert_eq!(new_img.width(), 97);
+        assert_eq!(new_img.height(), 78);
+
+        let img = get_small_test_image();
+        let new_img = resize(&img, &config);
+        assert_eq!(new_img.width(), 20);
+        assert_eq!(new_img.height(), 10);
+    }
+
+    #[test]
+    fn test_resize_some_none() {
+        let config = Config {
+            width: Some(100),
+            height: None,
+            ..Default::default()
+        };
+
+        let img = get_large_test_image();
+        let new_img = resize(&img, &config);
+        assert_eq!(new_img.width(), 100);
+        assert_eq!(new_img.height(), 80);
+
+        let config = Config {
+            width: Some(100),
+            height: None,
+            ..Default::default()
+        };
+        let img = get_small_test_image();
+        let new_img = resize(&img, &config);
+        assert_eq!(new_img.width(), 20);
+        assert_eq!(new_img.height(), 10);
+    }
+
+    #[test]
+    fn test_resize_none_some() {
+        let config = Config {
+            width: None,
+            height: Some(90),
+            ..Default::default()
+        };
+
+        let img = get_large_test_image();
+        let new_img = resize(&img, &config);
+        assert_eq!(new_img.width(), 225);
+        assert_eq!(new_img.height(), 180);
+
+        let config = Config {
+            width: None,
+            height: Some(4),
+            ..Default::default()
+        };
+        let img = get_small_test_image();
+        let new_img = resize(&img, &config);
+        assert_eq!(new_img.width(), 16);
+        assert_eq!(new_img.height(), 8);
+    }
+
+    #[test]
+    fn test_resize_some_some() {
+        let config = Config {
+            width: Some(15),
+            height: Some(9),
+            ..Default::default()
+        };
+
+        let img = get_large_test_image();
+        let new_img = resize(&img, &config);
+        assert_eq!(new_img.width(), 15);
+        assert_eq!(new_img.height(), 18);
+
+        let img = get_small_test_image();
+        let new_img = resize(&img, &config);
+        assert_eq!(new_img.width(), 15);
+        assert_eq!(new_img.height(), 18);
+    }
+}
