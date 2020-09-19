@@ -12,7 +12,7 @@ use printer::Printer;
 /// Default printing method. Uses upper and lower half blocks to fill
 /// terminal cells.
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
-    let resized_img = resize(&img, &config);
+    let resized_img = resize(&img, config.width, config.height);
     //TODO: logic to choose printer (Sixel, etc.)
     printer::BlockPrinter::print(&resized_img, config)
 }
@@ -21,23 +21,23 @@ pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     let img = image::io::Reader::open(filename)?
         .with_guessed_format()?
         .decode()?;
-    let resized_img = resize(&img, config);
+    let resized_img = resize(&img, config.width, config.height);
     print(&resized_img, config)
 }
 
-pub fn resize(img: &DynamicImage, config: &Config) -> DynamicImage {
+pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
     let new_img;
-    let (width, height) = img.dimensions();
-    let (mut print_width, mut print_height) = (width, height);
+    let (img_width, img_height) = img.dimensions();
+    let (mut print_width, mut print_height) = (img_width, img_height);
 
-    if let Some(w) = config.width {
+    if let Some(w) = width {
         print_width = w;
     }
-    if let Some(h) = config.height {
+    if let Some(h) = height {
         //since 2 pixels are printed per terminal cell, an image with twice the height can be fit
         print_height = 2 * h;
     }
-    match (config.width, config.height) {
+    match (width, height) {
         (None, None) => {
             let (term_w, term_h) = utils::terminal_size();
             let w = u32::from(term_w);
@@ -45,10 +45,10 @@ pub fn resize(img: &DynamicImage, config: &Config) -> DynamicImage {
             // - the prompt after executing the command will take a line
             // - gifs flicker
             let h = u32::from(term_h - 1);
-            if width > w {
+            if img_width > w {
                 print_width = w;
             }
-            if height > h {
+            if img_height > h {
                 print_height = 2 * h;
             }
             new_img = img.thumbnail(print_width, print_height);
@@ -69,7 +69,6 @@ pub fn resize(img: &DynamicImage, config: &Config) -> DynamicImage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Config;
     use image::DynamicImage;
 
     fn get_large_test_image() -> DynamicImage {
@@ -82,86 +81,65 @@ mod tests {
 
     #[test]
     fn test_resize_none() {
-        let config = Config {
-            width: None,
-            height: None,
-            ..Default::default()
-        };
+        let width = None;
+        let height = None;
 
         let img = get_large_test_image();
-        let new_img = resize(&img, &config);
+        let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 97);
         assert_eq!(new_img.height(), 78);
 
         let img = get_small_test_image();
-        let new_img = resize(&img, &config);
+        let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 20);
         assert_eq!(new_img.height(), 10);
     }
 
     #[test]
     fn test_resize_some_none() {
-        let config = Config {
-            width: Some(100),
-            height: None,
-            ..Default::default()
-        };
+        let width = Some(100);
+        let height = None;
 
         let img = get_large_test_image();
-        let new_img = resize(&img, &config);
+        let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 100);
         assert_eq!(new_img.height(), 80);
 
-        let config = Config {
-            width: Some(100),
-            height: None,
-            ..Default::default()
-        };
         let img = get_small_test_image();
-        let new_img = resize(&img, &config);
+        let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 20);
         assert_eq!(new_img.height(), 10);
     }
 
     #[test]
     fn test_resize_none_some() {
-        let config = Config {
-            width: None,
-            height: Some(90),
-            ..Default::default()
-        };
+        let width = None;
+        let mut height = Some(90);
 
         let img = get_large_test_image();
-        let new_img = resize(&img, &config);
+        let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 225);
         assert_eq!(new_img.height(), 180);
 
-        let config = Config {
-            width: None,
-            height: Some(4),
-            ..Default::default()
-        };
+        height = Some(4);
         let img = get_small_test_image();
-        let new_img = resize(&img, &config);
+        let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 16);
         assert_eq!(new_img.height(), 8);
     }
 
     #[test]
     fn test_resize_some_some() {
-        let config = Config {
-            width: Some(15),
-            height: Some(9),
-            ..Default::default()
-        };
+        let width = Some(15);
+        let height = Some(9);
 
         let img = get_large_test_image();
-        let new_img = resize(&img, &config);
+        let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 15);
         assert_eq!(new_img.height(), 18);
 
         let img = get_small_test_image();
-        let new_img = resize(&img, &config);
+        let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 15);
         assert_eq!(new_img.height(), 18);
     }
