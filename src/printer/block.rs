@@ -15,7 +15,7 @@ pub struct BlockPrinter {}
 
 impl Printer for BlockPrinter {
     fn print(img: &DynamicImage, config: &Config) -> ViuResult {
-        //there are two types of buffers in this function:
+        // there are two types of buffers in this function:
         // - stdout: Buffer, which is from termcolor crate. Used to buffer all writing
         //   required to print a single image or frame. Flushed once at the end of the function
         // - buffer: Vec<ColorSpec>, which stores back- and foreground colors for a
@@ -31,13 +31,13 @@ impl Printer for BlockPrinter {
         let mut buffer: Vec<ColorSpec> = Vec::with_capacity(width as usize);
         let mut mode = Mode::Top;
 
-        //iterate pixels and fill a buffer that contains 2 rows of pixels
-        //2 rows translate to 1 row in the terminal by using half block, foreground and background
-        //colors
+        // iterate pixels and fill a buffer that contains 2 rows of pixels
+        // 2 rows translate to 1 row in the terminal by using half block, foreground and background
+        // colors
         for pixel in img.pixels() {
-            //if the alpha of the pixel is 0, print a predefined pixel based on the position in order
-            //to mimic the chess board background. If the transparent option was given, instead print
-            //nothing.
+            // if the alpha of the pixel is 0, print a predefined pixel based on the position in order
+            // to mimic the chess board background. If the transparent option was given, instead print
+            // nothing.
             let color = if is_pixel_transparent(pixel) {
                 if config.transparent {
                     None
@@ -62,26 +62,26 @@ impl Printer for BlockPrinter {
             }
 
             curr_col_px += 1;
-            //if the buffer is full start adding the second row of pixels
+            // if the buffer is full start adding the second row of pixels
             if buffer.len() == width as usize {
                 if mode == Mode::Top {
                     mode = Mode::Bottom;
                     curr_col_px = 0;
                     curr_row_px += 1;
                 }
-                //only if the second row is completed flush the buffer and start again
+                // only if the second row is completed flush the buffer and start again
                 else if curr_col_px == width {
                     curr_col_px = 0;
                     curr_row_px += 1;
                     print_buffer(&mut buffer, false, &mut stdout)?;
                     mode = Mode::Top;
                 } else {
-                    //we are in the middle of the second row, there is work to do
+                    // we are in the middle of the second row, there is work to do
                 }
             }
         }
 
-        //buffer will be flushed if the image has an odd height
+        // buffer will be flushed if the image has an odd height
         if !buffer.is_empty() {
             print_buffer(&mut buffer, true, &mut stdout)?;
         }
@@ -89,8 +89,8 @@ impl Printer for BlockPrinter {
         match out.print(&stdout) {
             Ok(_) => Ok(()),
             Err(e) => match e.kind() {
-                //Ignore broken pipe errors. They arise when piping output to `head`, for example,
-                //and panic is not desired.
+                // Ignore broken pipe errors. They arise when piping output to `head`, for example,
+                // and panic is not desired.
                 std::io::ErrorKind::BrokenPipe => Ok(()),
                 _ => Err(ViuError::IO(e)),
             },
@@ -104,8 +104,8 @@ fn print_buffer(buff: &mut Vec<ColorSpec>, is_flush: bool, stdout: &mut Buffer) 
     let mut new_color;
 
     for c in buff.iter() {
-        //if we need to flush it means that we must print only one row with UPPER_HALF_BLOCK
-        //because it will be only the last row which contains 1 pixel
+        // If a flush is needed it means that only one row with UPPER_HALF_BLOCK must be printed
+        // because it is the last row, hence it contains only 1 pixel
         if is_flush {
             new_color = ColorSpec::new();
             if let Some(bg) = c.bg() {
@@ -197,7 +197,7 @@ fn write_newline(stdout: &mut Buffer) -> ViuResult {
     writeln!(stdout).map_err(ViuError::IO)
 }
 
-//enum used to keep track where the current line of pixels processed should be displayed - as
+// enum used to keep track where the current line of pixels processed should be displayed - as
 // background or foreground color
 #[derive(PartialEq)]
 enum Mode {

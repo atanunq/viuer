@@ -1,8 +1,13 @@
+#![deny(missing_docs)]
 //! Small library to display images in the terminal.
 //!
 //! This library contains functionality extracted from the [`viu` crate](https://github.com/atanunq/viu).
+//! It aims to provide an easy to use interface to print images in the terminal.
 //!
 //! ## Basic Usage
+//! The example below shows how to print the image `img.jpg` in 40x60 terminal cells. Because
+//! `viuer` by default uses half blocks (▄ and ▀), it will be able to fit a 40x120 image in 40x60 cells.
+//! All options are available throught the [Config](Config) struct.
 //! ```
 //! use viuer::{Config, print_from_file};
 //! let conf = Config {
@@ -10,7 +15,7 @@
 //!     height: Some(60),
 //!     ..Default::default()
 //! };
-//! print_from_file("/path/to/file", &conf);
+//! print_from_file("img.jpg", &conf);
 //! ```
 //!
 
@@ -28,7 +33,7 @@ use printer::Printer;
 /// Default printing method. Uses upper and lower half blocks to fill
 /// terminal cells.
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
-    //TODO: Could be extended to choose a different printer based
+    // TODO: Could be extended to choose a different printer based
     // on availability
 
     if config.resize {
@@ -67,7 +72,7 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
         (None, None) => {
             let (term_w, term_h) = utils::terminal_size();
             let w = u32::from(term_w);
-            //One less row because two reasons:
+            // One less row because two reasons:
             // - the prompt after executing the command will take a line
             // - gifs flicker
             let h = u32::from(term_h - 1);
@@ -80,11 +85,11 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
             img.thumbnail(print_width, print_height)
         }
         (Some(_), None) | (None, Some(_)) => {
-            //Either width or height is specified, resizing and preserving aspect ratio
+            // Either width or height is specified, resizing and preserving aspect ratio
             img.thumbnail(print_width, print_height)
         }
         (Some(_), Some(_)) => {
-            //Both width and height are specified, resizing without preserving aspect ratio
+            // Both width and height are specified, resizing without preserving aspect ratio
             img.thumbnail_exact(print_width, print_height)
         }
     }
