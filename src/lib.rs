@@ -5,9 +5,9 @@
 //! It aims to provide an easy to use interface to print images in the terminal.
 //!
 //! ## Basic Usage
-//! The example below shows how to print the image `img.jpg` in 40x60 terminal cells. Because
-//! `viuer` by default uses half blocks (▄ and ▀), it will be able to fit a 40x120 image in 40x60 cells.
-//! All options are available throught the [Config](Config) struct.
+//! The example below shows how to print the image `img.jpg` in 40x60 terminal cells. Since
+//! `viuer` uses half blocks by default (▄ and ▀), it will be able to fit a 40x120 image in 40x60 cells.
+//! Options are available through the [Config](Config) struct.
 //! ```
 //! use viuer::{Config, print_from_file};
 //! let conf = Config {
@@ -19,6 +19,7 @@
 //! ```
 //!
 
+pub use error::ViuError;
 use error::ViuResult;
 use image::{DynamicImage, GenericImageView};
 
@@ -30,8 +31,27 @@ mod utils;
 pub use config::Config;
 use printer::Printer;
 
-/// Default printing method. Uses upper and lower half blocks to fill
-/// terminal cells.
+/// Default printing method. Uses upper and lower half blocks to fill terminal cells.
+///
+/// ## Example
+/// The snippet below reads all of stdin, decodes it with the [image crate](https://docs.rs/image)
+/// and prints it to the terminal.
+///
+/// ```no_run
+/// use std::io::{stdin, Read};
+/// use viuer::{Config, print};
+///
+/// let stdin = stdin();
+/// let mut handle = stdin.lock();
+///
+/// let mut buf: Vec<u8> = Vec::new();
+/// let _ = handle
+///     .read_to_end(&mut buf)
+///     .expect("Could not read until EOF.");
+///
+/// let img = image::load_from_memory(&buf).expect("Data from stdin could not be decoded.");
+/// print(&img, &Config::default());
+/// ```
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
     // TODO: Could be extended to choose a different printer based
     // on availability
@@ -44,7 +64,7 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
     }
 }
 
-///Helper method that reads a file, tries to decode it and prints it
+///Helper method that reads a file, tries to decode it and prints it.
 pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     let img = image::io::Reader::open(filename)?
         .with_guessed_format()?
@@ -52,12 +72,13 @@ pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     print(&img, config)
 }
 
-/// Helper method that resizes a DynamicImage so that it fits in the terminal.
-//
+/// Helper method that resizes a [DynamicImage](https://docs.rs/image/*/image/enum.DynamicImage.html)
+/// to make it fit in the terminal.
+///
 /// The behaviour is different based on the provided width and height:
 /// - If both are None, the image will be resized to fit in the terminal. Aspect ratio is preserved.
 /// - If only one is provided and the other is None, it will fit the image in the provided boundary. Aspect ratio is preserved.
-/// - If both are provided, the image will be resized to match the new size. Aspect ratio is not preserved.
+/// - If both are provided, the image will be resized to match the new size. Aspect ratio is **not** preserved.
 pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
     let (mut print_width, mut print_height) = img.dimensions();
 

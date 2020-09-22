@@ -9,13 +9,13 @@ pub struct Config {
     /// Resize the image before printing. Defaults to true.
     pub resize: bool,
     //TODO: move the image to match passed x and y
-    /// X offset
+    /// X offset. Defaults to 0.
     pub x: u32,
-    /// Y offset
+    /// Y offset. Defaults to 0.
     pub y: u32,
-    /// Optional image width
+    /// Optional image width. Defaults to None.
     pub width: Option<u32>,
-    /// Optional image height
+    /// Optional image height. Defaults to None.
     pub height: Option<u32>,
 }
 

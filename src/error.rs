@@ -1,8 +1,11 @@
 pub type ViuResult = std::result::Result<(), ViuError>;
 
+/// Custom error type for `viu`ing operations.
 #[derive(Debug)]
 pub enum ViuError {
+    /// Encountered an error while doing transformations with the [image crate](https://docs.rs/image).
     Image(image::ImageError),
+    /// Encountered an error while doing IO operations.
     IO(std::io::Error),
 }
 
