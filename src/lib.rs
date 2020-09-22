@@ -1,3 +1,19 @@
+//! Small library to display images in the terminal.
+//!
+//! This library contains functionality extracted from the [`viu` crate](https://github.com/atanunq/viu).
+//!
+//! ## Basic Usage
+//! ```
+//! use viuer::{Config, print_from_file};
+//! let conf = Config {
+//!     width: Some(40),
+//!     height: Some(60),
+//!     ..Default::default()
+//! };
+//! print_from_file("/path/to/file", &conf);
+//! ```
+//!
+
 use error::ViuResult;
 use image::{DynamicImage, GenericImageView};
 
@@ -23,7 +39,7 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
     }
 }
 
-/// Helper method that reads a file, tries to decode it and prints it
+///Helper method that reads a file, tries to decode it and prints it
 pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     let img = image::io::Reader::open(filename)?
         .with_guessed_format()?
@@ -31,10 +47,14 @@ pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     print(&img, config)
 }
 
+/// Helper method that resizes a DynamicImage so that it fits in the terminal.
+//
+/// The behaviour is different based on the provided width and height:
+/// - If both are None, the image will be resized to fit in the terminal. Aspect ratio is preserved.
+/// - If only one is provided and the other is None, it will fit the image in the provided boundary. Aspect ratio is preserved.
+/// - If both are provided, the image will be resized to match the new size. Aspect ratio is not preserved.
 pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
-    let new_img;
-    let (img_width, img_height) = img.dimensions();
-    let (mut print_width, mut print_height) = (img_width, img_height);
+    let (mut print_width, mut print_height) = img.dimensions();
 
     if let Some(w) = width {
         print_width = w;
@@ -51,25 +71,23 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
             // - the prompt after executing the command will take a line
             // - gifs flicker
             let h = u32::from(term_h - 1);
-            if img_width > w {
+            if print_width > w {
                 print_width = w;
             }
-            if img_height > h {
+            if print_height > h {
                 print_height = 2 * h;
             }
-            new_img = img.thumbnail(print_width, print_height);
+            img.thumbnail(print_width, print_height)
         }
         (Some(_), None) | (None, Some(_)) => {
             //Either width or height is specified, resizing and preserving aspect ratio
-            new_img = img.thumbnail(print_width, print_height);
+            img.thumbnail(print_width, print_height)
         }
-        (Some(_w), Some(_h)) => {
+        (Some(_), Some(_)) => {
             //Both width and height are specified, resizing without preserving aspect ratio
-            new_img = img.thumbnail_exact(print_width, print_height);
+            img.thumbnail_exact(print_width, print_height)
         }
-    };
-
-    new_img
+    }
 }
 
 #[cfg(test)]

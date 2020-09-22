@@ -1,9 +1,11 @@
 use crate::utils;
 
+/// Configuration struct to customize printing behaviour.
 pub struct Config {
     pub transparent: bool,
     pub truecolor: bool,
     pub resize: bool,
+    //TODO: move the image to match passed x and y
     pub x: u32,
     pub y: u32,
     pub width: Option<u32>,
