@@ -2,7 +2,6 @@ pub type ViuResult = std::result::Result<(), ViuError>;
 
 #[derive(Debug)]
 pub enum ViuError {
-    Print,
     Image(image::ImageError),
     IO(std::io::Error),
 }
@@ -23,7 +22,6 @@ impl From<image::ImageError> for ViuError {
 impl std::fmt::Display for ViuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ViuError::Print => write!(f, "Writing to stdout was unsuccessful."),
             ViuError::Image(e) => write!(f, "Image error: {}", e),
             ViuError::IO(e) => write!(f, "IO error: {}", e),
         }

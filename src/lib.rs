@@ -12,17 +12,23 @@ use printer::Printer;
 /// Default printing method. Uses upper and lower half blocks to fill
 /// terminal cells.
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
-    let resized_img = resize(&img, config.width, config.height);
-    //TODO: logic to choose printer (Sixel, etc.)
-    printer::BlockPrinter::print(&resized_img, config)
+    //TODO: Could be extended to choose a different printer based
+    // on availability
+
+    if config.resize {
+        let resized_img = resize(&img, config.width, config.height);
+        printer::BlockPrinter::print(&resized_img, config)
+    } else {
+        printer::BlockPrinter::print(img, config)
+    }
 }
 
+/// Helper method that reads a file, tries to decode it and prints it
 pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     let img = image::io::Reader::open(filename)?
         .with_guessed_format()?
         .decode()?;
-    let resized_img = resize(&img, config.width, config.height);
-    print(&resized_img, config)
+    print(&img, config)
 }
 
 pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {

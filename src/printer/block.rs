@@ -86,10 +86,15 @@ impl Printer for BlockPrinter {
             print_buffer(&mut buffer, true, &mut stdout)?;
         }
 
-        clear_printer(&mut stdout)?;
-        out.print(&stdout).map_err(|_| handle_broken_pipe())?;
-
-        Ok(())
+        match out.print(&stdout) {
+            Ok(_) => Ok(()),
+            Err(e) => match e.kind() {
+                //Ignore broken pipe errors. They arise when piping output to `head`, for example,
+                //and panic is not desired.
+                std::io::ErrorKind::BrokenPipe => Ok(()),
+                _ => Err(ViuError::IO(e)),
+            },
+        }
     }
 }
 
@@ -140,7 +145,7 @@ fn print_buffer(buff: &mut Vec<ColorSpec>, is_flush: bool, stdout: &mut Buffer) 
             }
         }
         change_stdout_color(stdout, out_color)?;
-        write!(stdout, "{}", out_char).map_err(|_| handle_broken_pipe())?;
+        write!(stdout, "{}", out_char)?;
     }
 
     clear_printer(stdout)?;
@@ -185,20 +190,11 @@ fn clear_printer(stdout: &mut Buffer) -> ViuResult {
 }
 
 fn change_stdout_color(stdout: &mut Buffer, color: &ColorSpec) -> ViuResult {
-    stdout.set_color(color).map_err(|_| handle_broken_pipe())
+    stdout.set_color(color).map_err(ViuError::IO)
 }
 
 fn write_newline(stdout: &mut Buffer) -> ViuResult {
-    writeln!(stdout).map_err(|_| handle_broken_pipe())
-}
-
-//according to https://github.com/rust-lang/rust/issues/46016
-fn handle_broken_pipe() -> ViuError {
-    #[cfg(all(not(target_os = "wasi"), not(target_os = "windows")))]
-    unsafe {
-        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
-    };
-    ViuError::Print
+    writeln!(stdout).map_err(ViuError::IO)
 }
 
 //enum used to keep track where the current line of pixels processed should be displayed - as
