@@ -1,13 +1,14 @@
 #![deny(missing_docs)]
 //! Small library to display images in the terminal.
 //!
-//! This library contains functionality extracted from the [`viu` crate](https://github.com/atanunq/viu).
-//! It aims to provide an easy to use interface to print images in the terminal.
+//! This library contains functionality extracted from the [`viu`](https://github.com/atanunq/viu) crate.
+//! It aims to provide an easy to use interface to print images in the terminal. Uses some abstractions
+//! provided by the [`image`] crate.
 //!
 //! ## Basic Usage
 //! The example below shows how to print the image `img.jpg` in 40x60 terminal cells. Since
 //! `viuer` uses half blocks by default (▄ and ▀), it will be able to fit a 40x120 image in 40x60 cells.
-//! Options are available through the [Config](Config) struct.
+//! Options are available through the [Config] struct.
 //! ```
 //! use viuer::{Config, print_from_file};
 //! let conf = Config {
@@ -15,7 +16,8 @@
 //!     height: Some(60),
 //!     ..Default::default()
 //! };
-//! print_from_file("img.jpg", &conf);
+//! // will resize the image to fit in 40x60 terminal cells and print it
+//! print_from_file("img.jpg", &conf).expect("Image printing failed.");
 //! ```
 //!
 
@@ -30,12 +32,14 @@ mod utils;
 
 pub use config::Config;
 use printer::Printer;
+pub use utils::terminal_size;
 
 /// Default printing method. Uses upper and lower half blocks to fill terminal cells.
 ///
 /// ## Example
-/// The snippet below reads all of stdin, decodes it with the [image crate](https://docs.rs/image)
-/// and prints it to the terminal.
+/// The snippet below reads all of stdin, decodes it with the [`image`] crate
+/// and prints it to the terminal. The image will also be resized to fit in the terminal.
+/// Check the [Config] struct if you would like to modify this behaviour.
 ///
 /// ```no_run
 /// use std::io::{stdin, Read};
@@ -50,7 +54,7 @@ use printer::Printer;
 ///     .expect("Could not read until EOF.");
 ///
 /// let img = image::load_from_memory(&buf).expect("Data from stdin could not be decoded.");
-/// print(&img, &Config::default());
+/// print(&img, &Config::default()).expect("Image printing failed.");
 /// ```
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
     // TODO: Could be extended to choose a different printer based
@@ -64,7 +68,20 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
     }
 }
 
-///Helper method that reads a file, tries to decode it and prints it.
+/// Helper method that reads a file, tries to decode it and prints it.
+///
+/// ## Example
+/// ```
+/// use viuer::{Config, print_from_file};
+/// let conf = Config {
+///     width: Some(30),
+///     transparent: true,
+///     ..Default::default()
+/// };
+/// // Image will be scaled down to width 30. Aspect ratio will be preserved.
+/// // Also, the terminal's background color will be used instead of checkerboard pattern.
+/// print_from_file("img.jpg", &conf).expect("Image printing failed.");
+/// ```
 pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     let img = image::io::Reader::open(filename)?
         .with_guessed_format()?
@@ -72,13 +89,27 @@ pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
     print(&img, config)
 }
 
-/// Helper method that resizes a [DynamicImage](https://docs.rs/image/*/image/enum.DynamicImage.html)
+/// Helper method that resizes a [image::DynamicImage]
 /// to make it fit in the terminal.
 ///
 /// The behaviour is different based on the provided width and height:
 /// - If both are None, the image will be resized to fit in the terminal. Aspect ratio is preserved.
 /// - If only one is provided and the other is None, it will fit the image in the provided boundary. Aspect ratio is preserved.
 /// - If both are provided, the image will be resized to match the new size. Aspect ratio is **not** preserved.
+///
+/// Note that if the image is smaller than the available space, no transformations will be made.
+/// ## Example
+/// ```
+/// use viuer::resize;
+/// use image::GenericImageView;
+///
+/// let img = image::DynamicImage::ImageRgba8(image::RgbaImage::new(1000, 800));
+/// // resize the image so it can fit in a 30x80 rectangle of terminal cells
+/// let resized_img = resize(&img, Some(30), Some(80));
+/// assert_eq!(30, resized_img.width());
+/// // viuer uses half blocks, hence it can fit two pixels in one cell
+/// assert_eq!(160, resized_img.height());
+/// ```
 pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
     let (mut print_width, mut print_height) = img.dimensions();
 
@@ -136,8 +167,8 @@ mod tests {
 
         let img = get_large_test_image();
         let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 97);
-        assert_eq!(new_img.height(), 78);
+        assert_eq!(new_img.width(), 57);
+        assert_eq!(new_img.height(), 46);
 
         let img = get_small_test_image();
         let new_img = resize(&img, width, height);

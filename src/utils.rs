@@ -10,7 +10,12 @@ pub fn truecolor_available() -> bool {
     }
 }
 
-// Try to get terminal size. If unsuccessful, fallback to a constant
+/// Try to get the terminal size. If unsuccessful, fallback to constant dimensions.
+///
+/// Uses [crossterm::terminal::size].
+/// ## Example
+/// TODO: center an image example (requires offsets)
+/// ```
 #[cfg(not(test))]
 pub fn terminal_size() -> (u16, u16) {
     match crossterm::terminal::size() {
