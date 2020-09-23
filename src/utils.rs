@@ -1,6 +1,6 @@
 use std::env;
 
-const DEFAULT_TERM_SIZE: (u16, u16) = (100, 40);
+const DEFAULT_TERM_SIZE: (u16, u16) = (80, 24);
 
 pub fn truecolor_available() -> bool {
     if let Ok(value) = env::var("COLORTERM") {
