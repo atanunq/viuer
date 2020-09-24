@@ -8,11 +8,10 @@ pub struct Config {
     pub truecolor: bool,
     /// Resize the image before printing. Defaults to true.
     pub resize: bool,
-    //TODO: move the image to match passed x and y
     /// X offset. Defaults to 0.
-    pub x: u32,
+    pub x: u16,
     /// Y offset. Defaults to 0.
-    pub y: u32,
+    pub y: u16,
     /// Optional image width. Defaults to None.
     pub width: Option<u32>,
     /// Optional image height. Defaults to None.
