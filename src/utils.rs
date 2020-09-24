@@ -16,6 +16,16 @@ pub fn truecolor_available() -> bool {
 /// ## Example
 /// TODO: center an image example (requires offsets)
 /// ```
+/// use viuer::Config;
+///
+/// let conf = Config {
+///     width: Some(30),
+///     x: 40,
+///     y: 40,
+///     transparent: true,
+///     ..Default::default()
+/// };
+/// ```
 #[cfg(not(test))]
 pub fn terminal_size() -> (u16, u16) {
     match crossterm::terminal::size() {

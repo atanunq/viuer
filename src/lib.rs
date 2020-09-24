@@ -9,7 +9,7 @@
 //! The example below shows how to print the image `img.jpg` in 40x60 terminal cells. Since
 //! `viuer` uses half blocks by default (▄ and ▀), it will be able to fit a 40x120 image in 40x60 cells.
 //! Options are available through the [Config] struct.
-//! ```
+//! ```no_run
 //! use viuer::{Config, print_from_file};
 //! let conf = Config {
 //!     width: Some(40),
@@ -71,7 +71,7 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
 /// Helper method that reads a file, tries to decode it and prints it.
 ///
 /// ## Example
-/// ```
+/// ```no_run
 /// use viuer::{Config, print_from_file};
 /// let conf = Config {
 ///     width: Some(30),
