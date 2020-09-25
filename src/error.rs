@@ -9,6 +9,8 @@ pub enum ViuError {
     IO(std::io::Error),
     /// Encountered an error while doing [`crossterm`] operations.
     Crossterm(crossterm::ErrorKind),
+    /// Invalid configuration provided.
+    InvalidConfiguration(String),
 }
 
 impl std::error::Error for ViuError {}
@@ -36,6 +38,7 @@ impl std::fmt::Display for ViuError {
             ViuError::Image(e) => write!(f, "Image error: {}", e),
             ViuError::IO(e) => write!(f, "IO error: {}", e),
             ViuError::Crossterm(e) => write!(f, "Crossterm error: {}", e),
+            ViuError::InvalidConfiguration(s) => write!(f, "Invalid Configuration: {}", s),
         }
     }
 }

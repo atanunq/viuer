@@ -7,9 +7,12 @@ use image::{DynamicImage, GenericImageView, Rgba};
 use std::io::Write;
 use termcolor::{Buffer, BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
+use crossterm::cursor::{position, MoveRight, MoveTo, MoveToNextLine, MoveToPreviousLine};
+use crossterm::execute;
+use crossterm::tty::IsTty;
+
 const UPPER_HALF_BLOCK: &str = "\u{2580}";
 const LOWER_HALF_BLOCK: &str = "\u{2584}";
-const EMPTY_BLOCK: &str = " ";
 
 pub struct BlockPrinter {}
 
@@ -23,6 +26,35 @@ impl Printer for BlockPrinter {
         // all mentions of buffer below refer to the latter
         let stdout = BufferWriter::stdout(ColorChoice::Always);
         let mut out_buffer = stdout.buffer();
+
+        // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
+        let cursor_pos = if !config.absolute_offset && std::io::stdout().is_tty() {
+            position().ok()
+        } else {
+            None
+        };
+
+        // adjust y offset
+        if config.absolute_offset {
+            if config.y > 0 {
+                // If absolute_offset, move to (0,y).
+                execute!(out_buffer, MoveTo(0, config.y as u16))?;
+            } else {
+                //Negative values do not make sense.
+                return Err(ViuError::InvalidConfiguration(
+                    "absolute_offset is true but y offset is negative".to_owned(),
+                ));
+            }
+        } else if config.y < 0 {
+            // MoveUp if negative
+            execute!(out_buffer, MoveToPreviousLine(-config.y as u16))?;
+        } else {
+            // Move down y lines
+            for _ in 0..config.y {
+                // writeln! is used instead of MoveDown to force scrolldown
+                writeln!(out_buffer)?;
+            }
+        }
 
         let (width, _) = img.dimensions();
 
@@ -73,11 +105,20 @@ impl Printer for BlockPrinter {
                 else if curr_col_px == width {
                     curr_col_px = 0;
                     curr_row_px += 1;
+
+                    // move right if x offset is specified
+                    if config.x > 0 {
+                        execute!(out_buffer, MoveRight(config.x))?;
+                    }
+
+                    // flush the row_buffer into out_buffer
                     fill_out_buffer(&mut row_buffer, &mut out_buffer, false)?;
+                    // write the line to stdout
+                    print_buffer(&stdout, &mut out_buffer)?;
 
                     mode = Mode::Top;
                 } else {
-                    // we are in the middle of the second row, there is work to do
+                    // in the middle of the second row, more iterations are required
                 }
             }
         }
@@ -87,10 +128,24 @@ impl Printer for BlockPrinter {
             fill_out_buffer(&mut row_buffer, &mut out_buffer, true)?;
         }
 
+        // if the cursor has gone up while printing the image (due to negative y offset),
+        // bring it back down to its lowest position. Forces the cursor to be below everything
+        // printed when the method has been called more than once.
+        if !config.absolute_offset {
+            if let Some((_, pos_y)) = cursor_pos {
+                let (_, new_pos_y) = position()?;
+                if pos_y > new_pos_y {
+                    execute!(out_buffer, MoveToNextLine(pos_y - new_pos_y))?;
+                };
+            }
+        }
+
+        // do a final write to stdout, i.e flush
         print_buffer(&stdout, &mut out_buffer)
     }
 }
 
+// Send out_buffer to stdout. Empties it when it's done
 fn print_buffer(stdout: &BufferWriter, out_buffer: &mut Buffer) -> ViuResult {
     match stdout.print(out_buffer) {
         Ok(_) => {
@@ -106,6 +161,7 @@ fn print_buffer(stdout: &BufferWriter, out_buffer: &mut Buffer) -> ViuResult {
     }
 }
 
+// Translates the row_buffer, containing colors, into the out_buffer which will be flushed to the terminal
 fn fill_out_buffer(
     row_buffer: &mut Vec<ColorSpec>,
     out_buffer: &mut Buffer,
@@ -124,16 +180,16 @@ fn fill_out_buffer(
                 new_color.set_fg(Some(*bg));
                 out_char = UPPER_HALF_BLOCK;
             } else {
-                out_char = EMPTY_BLOCK;
+                execute!(out_buffer, MoveRight(1))?;
+                continue;
             }
             out_color = &new_color;
         } else {
             match (c.fg(), c.bg()) {
                 (None, None) => {
                     // completely transparent
-                    new_color = ColorSpec::new();
-                    out_color = &new_color;
-                    out_char = EMPTY_BLOCK;
+                    execute!(out_buffer, MoveRight(1))?;
+                    continue;
                 }
                 (Some(bottom), None) => {
                     // only top transparent

@@ -8,10 +8,16 @@ pub struct Config {
     pub truecolor: bool,
     /// Resize the image before printing. Defaults to true.
     pub resize: bool,
+    /// Make the x and y offset be relative to the top left terminal corner.
+    /// If false, The y offset is relative to the row after the last printed image.
+    /// Also, setting to false will cause the terminal to scroll down as images get printed.
+    /// Defaults to true.
+    // TODO: an example would be nice
+    pub absolute_offset: bool,
     /// X offset. Defaults to 0.
     pub x: u16,
-    /// Y offset. Defaults to 0.
-    pub y: u16,
+    /// Y offset. Can be negative only when `absolute_offset` is `false`. Defaults to 0.
+    pub y: i16,
     /// Optional image width. Defaults to None.
     pub width: Option<u32>,
     /// Optional image height. Defaults to None.
@@ -24,6 +30,7 @@ impl std::default::Default for Config {
             transparent: false,
             truecolor: utils::truecolor_available(),
             resize: true,
+            absolute_offset: true,
             x: 0,
             y: 0,
             width: None,
