@@ -36,7 +36,7 @@ impl Printer for BlockPrinter {
 
         // adjust y offset
         if config.absolute_offset {
-            if config.y > 0 {
+            if config.y >= 0 {
                 // If absolute_offset, move to (0,y).
                 execute!(out_buffer, MoveTo(0, config.y as u16))?;
             } else {
@@ -51,7 +51,7 @@ impl Printer for BlockPrinter {
         } else {
             // Move down y lines
             for _ in 0..config.y {
-                // writeln! is used instead of MoveDown to force scrolldown
+                // writeln! is used instead of MoveDown to force scrolldown TODO: is it?
                 writeln!(out_buffer)?;
             }
         }
@@ -113,6 +113,7 @@ impl Printer for BlockPrinter {
 
                     // flush the row_buffer into out_buffer
                     fill_out_buffer(&mut row_buffer, &mut out_buffer, false)?;
+
                     // write the line to stdout
                     print_buffer(&stdout, &mut out_buffer)?;
 
@@ -131,14 +132,14 @@ impl Printer for BlockPrinter {
         // if the cursor has gone up while printing the image (due to negative y offset),
         // bring it back down to its lowest position. Forces the cursor to be below everything
         // printed when the method has been called more than once.
-        if !config.absolute_offset {
+        if !config.absolute_offset && std::io::stdout().is_tty() {
             if let Some((_, pos_y)) = cursor_pos {
                 let (_, new_pos_y) = position()?;
                 if pos_y > new_pos_y {
                     execute!(out_buffer, MoveToNextLine(pos_y - new_pos_y))?;
                 };
             }
-        }
+        };
 
         // do a final write to stdout, i.e flush
         print_buffer(&stdout, &mut out_buffer)

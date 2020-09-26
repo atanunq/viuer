@@ -6,9 +6,9 @@
 //! provided by the [`image`] crate.
 //!
 //! ## Basic Usage
-//! The example below shows how to print the image `img.jpg` in 40x60 terminal cells. Since
-//! `viuer` uses half blocks by default (▄ and ▀), it will be able to fit a 40x120 image in 40x60 cells.
-//! Options are available through the [Config] struct.
+//! The example below shows how to print the image `img.jpg` in 40x60 terminal cells, starting at the
+//! top left corner. Since `viuer` uses half blocks by default (▄ and ▀), it will be able to fit a
+//! 40x120 image in 40x60 cells. Options are available through the [Config] struct.
 //! ```no_run
 //! use viuer::{Config, print_from_file};
 //! let conf = Config {

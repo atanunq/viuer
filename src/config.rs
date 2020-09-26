@@ -9,8 +9,7 @@ pub struct Config {
     /// Resize the image before printing. Defaults to true.
     pub resize: bool,
     /// Make the x and y offset be relative to the top left terminal corner.
-    /// If false, The y offset is relative to the row after the last printed image.
-    /// Also, setting to false will cause the terminal to scroll down as images get printed.
+    /// If false, the y offset is relative to the row after the last printed image.
     /// Defaults to true.
     // TODO: an example would be nice
     pub absolute_offset: bool,

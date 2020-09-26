@@ -14,17 +14,21 @@ pub fn truecolor_available() -> bool {
 ///
 /// Uses [crossterm::terminal::size].
 /// ## Example
-/// TODO: center an image example (requires offsets)
-/// ```
-/// use viuer::Config;
+/// The example below prints "img.jpg" with dimensions 80x40 in the center of the terminal.
+/// ```no_run
+/// use viuer::{Config, print_from_file, terminal_size};
 ///
-/// let conf = Config {
-///     width: Some(30),
-///     x: 40,
-///     y: 40,
-///     transparent: true,
+/// let (term_w, term_h) = terminal_size();
+/// let w = 80;
+/// let h = 40;
+/// let config = Config {
+///     x: (term_w - w) / 2,
+///     y: (term_h - h) as i16 / 2,
+///     width: Some(w as u32),
+///     height: Some(h as u32),
 ///     ..Default::default()
 /// };
+/// print_from_file(".img.jpg", &config).expect("Image printing failed.");
 /// ```
 #[cfg(not(test))]
 pub fn terminal_size() -> (u16, u16) {
