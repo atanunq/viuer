@@ -1,6 +1,8 @@
 # viuer
 Display images in the terminal with ease.
 
+![ci](https://github.com/atanunq/viuer/workflows/Rust/badge.svg)
+
 `viuer` is a Rust library that makes it easy to show images in the terminal. It has a straightforward
 interface and is configured through a single struct.
 
