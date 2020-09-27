@@ -18,14 +18,16 @@ pub fn truecolor_available() -> bool {
 /// ```no_run
 /// use viuer::{Config, print_from_file, terminal_size};
 ///
-/// let (term_w, term_h) = terminal_size();
-/// let w = 80;
-/// let h = 40;
+/// let (term_width, term_height) = terminal_size();
+/// // Set desired image dimensions
+/// let width = 80;
+/// let height = 40;
+///
 /// let config = Config {
-///     x: (term_w - w) / 2,
-///     y: (term_h - h) as i16 / 2,
-///     width: Some(w as u32),
-///     height: Some(h as u32),
+///     x: (term_width - width) / 2,
+///     y: (term_height - height) as i16 / 2,
+///     width: Some(width as u32),
+///     height: Some(height as u32),
 ///     ..Default::default()
 /// };
 /// print_from_file(".img.jpg", &config).expect("Image printing failed.");
