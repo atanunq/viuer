@@ -7,9 +7,15 @@ use image::{DynamicImage, GenericImageView, Rgba};
 use std::io::Write;
 use termcolor::{Buffer, BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
+use crossterm::cursor::{position, MoveRight, MoveTo, MoveToNextLine, MoveToPreviousLine};
+use crossterm::execute;
+use crossterm::tty::IsTty;
+
 const UPPER_HALF_BLOCK: &str = "\u{2580}";
 const LOWER_HALF_BLOCK: &str = "\u{2584}";
-const EMPTY_BLOCK: &str = " ";
+
+const CHECKERBOARD_BACKGROUND_LIGHT: (u8, u8, u8) = (153, 153, 153);
+const CHECKERBOARD_BACKGROUND_DARK: (u8, u8, u8) = (102, 102, 102);
 
 pub struct BlockPrinter {}
 
@@ -17,27 +23,56 @@ impl Printer for BlockPrinter {
     fn print(img: &DynamicImage, config: &Config) -> ViuResult {
         // there are two types of buffers in this function:
         // - stdout: Buffer, which is from termcolor crate. Used to buffer all writing
-        //   required to print a single image or frame. Flushed once at the end of the function
-        // - buffer: Vec<ColorSpec>, which stores back- and foreground colors for a
-        //   maximum of 1 row of blocks, i.e 2 rows of pixels. Flushed every 2 pixel rows of the images
-        // all mentions of buffer below refer to the latter
-        let out = BufferWriter::stdout(ColorChoice::Always);
-        let mut stdout = out.buffer();
+        //   required to print a single image or frame. Flushed on every line
+        // - row_buffer: Vec<ColorSpec>, which stores back- and foreground colors for a
+        //   row of terminal cells. When flushed, its output goes into out_buffer.
+        // They are both flushed on every terminal line (i.e 2 pixel rows)
+        let stdout = BufferWriter::stdout(ColorChoice::Always);
+        let mut out_buffer = stdout.buffer();
+
+        let is_tty = std::io::stdout().is_tty();
+        // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
+        let cursor_pos = if is_tty { position().ok() } else { None };
+
+        // adjust y offset
+        if config.absolute_offset {
+            if config.y >= 0 {
+                // If absolute_offset, move to (0,y).
+                execute!(out_buffer, MoveTo(0, config.y as u16))?;
+            } else {
+                //Negative values do not make sense.
+                return Err(ViuError::InvalidConfiguration(
+                    "absolute_offset is true but y offset is negative".to_owned(),
+                ));
+            }
+        } else if config.y < 0 {
+            // MoveUp if negative
+            execute!(out_buffer, MoveToPreviousLine(-config.y as u16))?;
+        } else {
+            // Move down y lines
+            for _ in 0..config.y {
+                // writeln! is used instead of MoveDown to force scrolldown
+                // observed when config.y > 0 and cursor is on the last terminal line
+                writeln!(out_buffer)?;
+            }
+        }
 
         let (width, _) = img.dimensions();
 
+        //TODO: position information is contained in the pixel
         let mut curr_col_px = 0;
         let mut curr_row_px = 0;
-        let mut buffer: Vec<ColorSpec> = Vec::with_capacity(width as usize);
+
+        let mut row_buffer: Vec<ColorSpec> = Vec::with_capacity(width as usize);
+
+        // row_buffer building mode. At first the top colors are calculated and then the bottom
+        // Once the bottom row is ready, row_buffer is flushed
         let mut mode = Mode::Top;
 
-        // iterate pixels and fill a buffer that contains 2 rows of pixels
-        // 2 rows translate to 1 row in the terminal by using half block, foreground and background
-        // colors
+        // iterate pixels and fill row_buffer
         for pixel in img.pixels() {
             // if the alpha of the pixel is 0, print a predefined pixel based on the position in order
-            // to mimic the chess board background. If the transparent option was given, instead print
-            // nothing.
+            // to mimic the checherboard background. If the transparent option was given, move right instead
             let color = if is_pixel_transparent(pixel) {
                 if config.transparent {
                     None
@@ -53,75 +88,112 @@ impl Printer for BlockPrinter {
             };
 
             if mode == Mode::Top {
+                // add a new ColorSpec to row_buffer
                 let mut c = ColorSpec::new();
                 c.set_bg(color);
-                buffer.push(c);
+                row_buffer.push(c);
             } else {
-                let colorspec_to_upg = &mut buffer[curr_col_px as usize];
+                // upgrade an already existing ColorSpec
+                let colorspec_to_upg = &mut row_buffer[curr_col_px as usize];
                 colorspec_to_upg.set_fg(color);
             }
 
             curr_col_px += 1;
             // if the buffer is full start adding the second row of pixels
-            if buffer.len() == width as usize {
+            if row_buffer.len() == width as usize {
                 if mode == Mode::Top {
                     mode = Mode::Bottom;
                     curr_col_px = 0;
                     curr_row_px += 1;
                 }
-                // only if the second row is completed flush the buffer and start again
+                // only if the second row is completed, flush the buffer and start again
                 else if curr_col_px == width {
                     curr_col_px = 0;
                     curr_row_px += 1;
-                    print_buffer(&mut buffer, false, &mut stdout)?;
+
+                    // move right if x offset is specified
+                    if config.x > 0 {
+                        execute!(out_buffer, MoveRight(config.x))?;
+                    }
+
+                    // flush the row_buffer into out_buffer
+                    fill_out_buffer(&mut row_buffer, &mut out_buffer, false)?;
+
+                    // write the line to stdout
+                    print_buffer(&stdout, &mut out_buffer)?;
+
                     mode = Mode::Top;
                 } else {
-                    // we are in the middle of the second row, there is work to do
+                    // in the middle of the second row, more iterations are required
                 }
             }
         }
 
         // buffer will be flushed if the image has an odd height
-        if !buffer.is_empty() {
-            print_buffer(&mut buffer, true, &mut stdout)?;
+        if !row_buffer.is_empty() {
+            fill_out_buffer(&mut row_buffer, &mut out_buffer, true)?;
         }
 
-        match out.print(&stdout) {
-            Ok(_) => Ok(()),
-            Err(e) => match e.kind() {
-                // Ignore broken pipe errors. They arise when piping output to `head`, for example,
-                // and panic is not desired.
-                std::io::ErrorKind::BrokenPipe => Ok(()),
-                _ => Err(ViuError::IO(e)),
-            },
-        }
+        // if the cursor has ended above where it started, bring it back down to its lowest position
+        if is_tty {
+            if let Some((_, pos_y)) = cursor_pos {
+                let (_, new_pos_y) = position()?;
+                if pos_y > new_pos_y {
+                    execute!(out_buffer, MoveToNextLine(pos_y - new_pos_y))?;
+                };
+            }
+        };
+
+        // do a final write to stdout to print last row if length is odd, and reset cursor position
+        print_buffer(&stdout, &mut out_buffer)
     }
 }
 
-fn print_buffer(buff: &mut Vec<ColorSpec>, is_flush: bool, stdout: &mut Buffer) -> ViuResult {
+// Send out_buffer to stdout. Empties it when it's done
+fn print_buffer(stdout: &BufferWriter, out_buffer: &mut Buffer) -> ViuResult {
+    match stdout.print(out_buffer) {
+        Ok(_) => {
+            out_buffer.clear();
+            Ok(())
+        }
+        Err(e) => match e.kind() {
+            // Ignore broken pipe errors. They arise when piping output to `head`, for example,
+            // and panic is not desired.
+            std::io::ErrorKind::BrokenPipe => Ok(()),
+            _ => Err(ViuError::IO(e)),
+        },
+    }
+}
+
+// Translates the row_buffer, containing colors, into the out_buffer which will be flushed to the terminal
+fn fill_out_buffer(
+    row_buffer: &mut Vec<ColorSpec>,
+    out_buffer: &mut Buffer,
+    is_last_row: bool,
+) -> ViuResult {
     let mut out_color;
     let mut out_char;
     let mut new_color;
 
-    for c in buff.iter() {
+    for c in row_buffer.iter() {
         // If a flush is needed it means that only one row with UPPER_HALF_BLOCK must be printed
         // because it is the last row, hence it contains only 1 pixel
-        if is_flush {
+        if is_last_row {
             new_color = ColorSpec::new();
             if let Some(bg) = c.bg() {
                 new_color.set_fg(Some(*bg));
                 out_char = UPPER_HALF_BLOCK;
             } else {
-                out_char = EMPTY_BLOCK;
+                execute!(out_buffer, MoveRight(1))?;
+                continue;
             }
             out_color = &new_color;
         } else {
             match (c.fg(), c.bg()) {
                 (None, None) => {
                     // completely transparent
-                    new_color = ColorSpec::new();
-                    out_color = &new_color;
-                    out_char = EMPTY_BLOCK;
+                    execute!(out_buffer, MoveRight(1))?;
+                    continue;
                 }
                 (Some(bottom), None) => {
                     // only top transparent
@@ -144,13 +216,13 @@ fn print_buffer(buff: &mut Vec<ColorSpec>, is_flush: bool, stdout: &mut Buffer) 
                 }
             }
         }
-        change_stdout_color(stdout, out_color)?;
-        write!(stdout, "{}", out_char)?;
+        out_buffer.set_color(out_color)?;
+        write!(out_buffer, "{}", out_char)?;
     }
 
-    clear_printer(stdout)?;
-    write_newline(stdout)?;
-    buff.clear();
+    reset_color(out_buffer)?;
+    writeln!(out_buffer)?;
+    row_buffer.clear();
 
     Ok(())
 }
@@ -163,9 +235,9 @@ fn is_pixel_transparent(pixel: (u32, u32, Rgba<u8>)) -> bool {
 fn get_transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
     //imitate the transparent chess board pattern
     let rgb = if row % 2 == col % 2 {
-        (102, 102, 102)
+        CHECKERBOARD_BACKGROUND_DARK
     } else {
-        (153, 153, 153)
+        CHECKERBOARD_BACKGROUND_LIGHT
     };
     if truecolor {
         Color::Rgb(rgb.0, rgb.1, rgb.2)
@@ -184,17 +256,9 @@ fn get_color_from_pixel(pixel: (u32, u32, Rgba<u8>), truecolor: bool) -> Color {
     }
 }
 
-fn clear_printer(stdout: &mut Buffer) -> ViuResult {
+fn reset_color(out_buffer: &mut Buffer) -> ViuResult {
     let c = ColorSpec::new();
-    change_stdout_color(stdout, &c)
-}
-
-fn change_stdout_color(stdout: &mut Buffer, color: &ColorSpec) -> ViuResult {
-    stdout.set_color(color).map_err(ViuError::IO)
-}
-
-fn write_newline(stdout: &mut Buffer) -> ViuResult {
-    writeln!(stdout).map_err(ViuError::IO)
+    out_buffer.set_color(&c).map_err(ViuError::IO)
 }
 
 // enum used to keep track where the current line of pixels processed should be displayed - as

@@ -1,4 +1,5 @@
 #![deny(missing_docs)]
+
 //! Small library to display images in the terminal.
 //!
 //! This library contains functionality extracted from the [`viu`](https://github.com/atanunq/viu) crate.
@@ -6,20 +7,19 @@
 //! provided by the [`image`] crate.
 //!
 //! ## Basic Usage
-//! The example below shows how to print the image `img.jpg` in 40x60 terminal cells. Since
-//! `viuer` uses half blocks by default (▄ and ▀), it will be able to fit a 40x120 image in 40x60 cells.
-//! Options are available through the [Config] struct.
+//! The example below shows how to print the image `img.jpg` in 40x30 terminal cells, starting at the
+//! top left corner. Since `viuer` uses half blocks by default (▄ and ▀), it will be able to fit a
+//! 40x60 image in 40x30 cells. Options are available through the [Config] struct.
 //! ```no_run
 //! use viuer::{Config, print_from_file};
 //! let conf = Config {
 //!     width: Some(40),
-//!     height: Some(60),
+//!     height: Some(30),
 //!     ..Default::default()
 //! };
 //! // will resize the image to fit in 40x60 terminal cells and print it
 //! print_from_file("img.jpg", &conf).expect("Image printing failed.");
 //! ```
-//!
 
 pub use error::ViuError;
 use error::ViuResult;
