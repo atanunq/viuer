@@ -1,12 +1,12 @@
 # viuer
 Display images in the terminal with ease.
 
+![ci](https://github.com/atanunq/viuer/workflows/Rust/badge.svg)
+
 `viuer` is a Rust library that makes it easy to show images in the terminal. It has a straightforward
 interface and is configured through a single struct.
 
 ## Examples
-
-The example below will display `img.jpg` with dimensions 20x30, starting from row 10 and column 20.
 
 ```toml
 # in Cargo.toml, under [dependencies]
@@ -18,13 +18,18 @@ use viuer::{print_from_file, Config};
 
 fn main() {
     let conf = Config {
+        // set offset
         x: 20,
         y: 4,
+        // set dimensions
         width: Some(80),
         height: Some(25),
         ..Default::default()
     };
 
+    // starting from row 4 and column 20,
+    // display `img.jpg` with dimensions 80x25 (in terminal cells)
+    // note that the actual resolution in the terminal will be 80x50
     print_from_file("img.jpg", &conf).expect("Image printing failed.");
 }
 ```
