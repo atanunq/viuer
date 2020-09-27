@@ -220,7 +220,7 @@ fn fill_out_buffer(
         write!(out_buffer, "{}", out_char)?;
     }
 
-    reset_color(out_buffer)?;
+    out_buffer.reset()?;
     writeln!(out_buffer)?;
     row_buffer.clear();
 
@@ -254,11 +254,6 @@ fn get_color_from_pixel(pixel: (u32, u32, Rgba<u8>), truecolor: bool) -> Color {
     } else {
         Color::Ansi256(ansi256_from_rgb(rgb))
     }
-}
-
-fn reset_color(out_buffer: &mut Buffer) -> ViuResult {
-    let c = ColorSpec::new();
-    out_buffer.set_color(&c).map_err(ViuError::IO)
 }
 
 // enum used to keep track where the current line of pixels processed should be displayed - as
