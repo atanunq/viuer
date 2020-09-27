@@ -27,12 +27,9 @@ impl Printer for BlockPrinter {
         let stdout = BufferWriter::stdout(ColorChoice::Always);
         let mut out_buffer = stdout.buffer();
 
+        let is_tty = std::io::stdout().is_tty();
         // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
-        let cursor_pos = if !config.absolute_offset && std::io::stdout().is_tty() {
-            position().ok()
-        } else {
-            None
-        };
+        let cursor_pos = if is_tty { position().ok() } else { None };
 
         // adjust y offset
         if config.absolute_offset {
@@ -129,10 +126,8 @@ impl Printer for BlockPrinter {
             fill_out_buffer(&mut row_buffer, &mut out_buffer, true)?;
         }
 
-        // if the cursor has gone up while printing the image (due to negative y offset),
-        // bring it back down to its lowest position. Forces the cursor to be below everything
-        // printed when the method has been called more than once.
-        if !config.absolute_offset && std::io::stdout().is_tty() {
+        // if the cursor has ended above where it started, bring it back down to its lowest position
+        if is_tty {
             if let Some((_, pos_y)) = cursor_pos {
                 let (_, new_pos_y) = position()?;
                 if pos_y > new_pos_y {

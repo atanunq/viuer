@@ -10,7 +10,7 @@ pub fn truecolor_available() -> bool {
     }
 }
 
-/// Try to get the terminal size. If unsuccessful, fallback to constant dimensions.
+/// Try to get the terminal size. If unsuccessful, fallback to a default (80x24).
 ///
 /// Uses [crossterm::terminal::size].
 /// ## Example
@@ -30,7 +30,7 @@ pub fn truecolor_available() -> bool {
 ///     height: Some(height as u32),
 ///     ..Default::default()
 /// };
-/// print_from_file(".img.jpg", &config).expect("Image printing failed.");
+/// print_from_file("img.jpg", &config).expect("Image printing failed.");
 /// ```
 #[cfg(not(test))]
 pub fn terminal_size() -> (u16, u16) {
