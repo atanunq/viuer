@@ -57,14 +57,21 @@ pub use utils::terminal_size;
 /// print(&img, &Config::default()).expect("Image printing failed.");
 /// ```
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
-    // TODO: Could be extended to choose a different printer based
-    // on availability
+    //TODO: Resizing should be revamped, kitty's printer is not getting terminal size
+    let kitty_print = printer::KittyPrinter::print(img, config);
 
-    if config.resize {
-        let resized_img = resize(&img, config.width, config.height);
-        printer::BlockPrinter::print(&resized_img, config)
-    } else {
+    if kitty_print.is_err() {
+        // resize if required, but only when printing blocks
+        let resized_img;
+        let img = if config.resize {
+            resized_img = resize(&img, config.width, config.height);
+            &resized_img
+        } else {
+            img
+        };
         printer::BlockPrinter::print(img, config)
+    } else {
+        kitty_print
     }
 }
 

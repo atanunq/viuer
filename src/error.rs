@@ -11,6 +11,10 @@ pub enum ViuError {
     Crossterm(crossterm::ErrorKind),
     /// Invalid configuration provided.
     InvalidConfiguration(String),
+    /// Error while creating temp files
+    Tempfile(tempfile::PersistError),
+    /// Errenous response received from Kitty
+    Kitty(Vec<console::Key>),
 }
 
 impl std::error::Error for ViuError {}
@@ -32,6 +36,12 @@ impl From<crossterm::ErrorKind> for ViuError {
     }
 }
 
+impl From<tempfile::PersistError> for ViuError {
+    fn from(err: tempfile::PersistError) -> Self {
+        ViuError::Tempfile(err)
+    }
+}
+
 impl std::fmt::Display for ViuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -39,6 +49,8 @@ impl std::fmt::Display for ViuError {
             ViuError::IO(e) => write!(f, "IO error: {}", e),
             ViuError::Crossterm(e) => write!(f, "Crossterm error: {}", e),
             ViuError::InvalidConfiguration(s) => write!(f, "Invalid Configuration: {}", s),
+            ViuError::Tempfile(e) => write!(f, "Tempfile error: {}", e),
+            ViuError::Kitty(keys) => write!(f, "Kitty response: {:?}", keys),
         }
     }
 }
