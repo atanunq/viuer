@@ -18,8 +18,10 @@ pub struct Config {
     pub width: Option<u32>,
     /// Optional image height. Defaults to None.
     pub height: Option<u32>,
-    /// Use truecolor when the terminal supports it. Defaults to true.
+    /// Use truecolor if the terminal supports it. Defaults to true.
     pub truecolor: bool,
+    /// Use Kitty protocol if the terminal supports it. Defaults to true.
+    pub use_kitty: bool,
 }
 
 impl std::default::Default for Config {
@@ -33,6 +35,7 @@ impl std::default::Default for Config {
             width: None,
             height: None,
             truecolor: utils::truecolor_available(),
+            use_kitty: true,
         }
     }
 }
