@@ -10,22 +10,27 @@ use std::io::Write;
 pub struct KittyPrinter {}
 
 lazy_static! {
-    pub static ref KITTY_SUPPORT: KittySupport = has_kitty_support();
+    pub static ref KITTY_SUPPORT: KittySupport = check_kitty_support();
+}
+
+/// Returns the terminal's support for the Kitty graphics protocol.
+pub fn has_kitty_support() -> KittySupport {
+    *KITTY_SUPPORT
 }
 
 impl Printer for KittyPrinter {
     fn print(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
         match *KITTY_SUPPORT {
             KittySupport::None => {
-                //give up, print blocks
+                // give up, print blocks
                 Err(ViuError::KittyNotSupported)
             }
             KittySupport::Local => {
-                //print from file
+                // print from file
                 print_local(img, config)
             }
             KittySupport::Remote => {
-                //print through escape codes
+                // print through escape codes
                 todo!()
             }
         }
@@ -33,9 +38,9 @@ impl Printer for KittyPrinter {
 }
 
 #[derive(PartialEq, Copy, Clone)]
-///
+/// The extend to which the Kitty graphics protocol can be used.
 pub enum KittySupport {
-    /// The Kitty graphics protocol cannot be used.
+    /// The Kitty graphics protocol is not supported.
     None,
     /// Kitty is running locally, data can be shared through a file.
     Local,
@@ -43,8 +48,8 @@ pub enum KittySupport {
     Remote,
 }
 
-///
-fn has_kitty_support() -> KittySupport {
+// Check if Kitty protocol can be used
+fn check_kitty_support() -> KittySupport {
     if let Ok(term) = std::env::var("TERM") {
         if term.contains("kitty") {
             if has_local_support().is_ok() {
@@ -113,7 +118,7 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
     let path = store_in_tmp_file(raw_img)?;
 
     let mut stdout = std::io::stdout();
-    // adjust y offset
+    // adjust offset
     if config.absolute_offset {
         if config.y >= 0 {
             // If absolute_offset, move to (x,y).
@@ -144,13 +149,11 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
     let (w, h) = crate::resize(img, config.width, config.height).dimensions();
 
     print!(
-        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t,X={},Y={};{}\x1b\\",
+        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t;{}\x1b\\",
         img.width(),
         img.height(),
         w,
         h / 2,
-        config.x,
-        config.y,
         base64::encode(path.to_str().unwrap())
     );
     println!();

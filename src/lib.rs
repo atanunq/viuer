@@ -67,9 +67,9 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
     // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
     let cursor_pos = if is_tty { position().ok() } else { None };
 
-    let kitty_print = printer::KittyPrinter::print(img, config);
-
-    if kitty_print.is_err() {
+    if has_kitty_support() != KittySupport::None {
+        printer::KittyPrinter::print(img, config)?;
+    } else {
         // resize if required, but only when printing blocks
         let resized_img;
         let img = if config.resize {
