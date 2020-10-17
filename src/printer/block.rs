@@ -7,9 +7,8 @@ use image::{DynamicImage, GenericImageView, Rgba};
 use std::io::Write;
 use termcolor::{Buffer, BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
-use crossterm::cursor::{position, MoveRight, MoveTo, MoveToNextLine, MoveToPreviousLine};
+use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
 use crossterm::execute;
-use crossterm::tty::IsTty;
 
 const UPPER_HALF_BLOCK: &str = "\u{2580}";
 const LOWER_HALF_BLOCK: &str = "\u{2584}";
@@ -29,10 +28,6 @@ impl Printer for BlockPrinter {
         // They are both flushed on every terminal line (i.e 2 pixel rows)
         let stdout = BufferWriter::stdout(ColorChoice::Always);
         let mut out_buffer = stdout.buffer();
-
-        let is_tty = std::io::stdout().is_tty();
-        // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
-        let cursor_pos = if is_tty { position().ok() } else { None };
 
         // adjust y offset
         if config.absolute_offset {
@@ -133,16 +128,6 @@ impl Printer for BlockPrinter {
         if !row_buffer.is_empty() {
             fill_out_buffer(&mut row_buffer, &mut out_buffer, true)?;
         }
-
-        // if the cursor has ended above where it started, bring it back down to its lowest position
-        if is_tty {
-            if let Some((_, pos_y)) = cursor_pos {
-                let (_, new_pos_y) = position()?;
-                if pos_y > new_pos_y {
-                    execute!(out_buffer, MoveToNextLine(pos_y - new_pos_y))?;
-                };
-            }
-        };
 
         // do a final write to stdout to print last row if length is odd, and reset cursor position
         print_buffer(&stdout, &mut out_buffer)

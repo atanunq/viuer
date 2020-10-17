@@ -13,6 +13,10 @@ keywords = ["terminal", "image"]
 
 [dependencies]
 termcolor = "1.1"
-crossterm = "0.17"
+crossterm = "0.18"
 ansi_colours = "1.0"
 image = "0.23"
+base64 = "0.13"
+tempfile = "3.1"
+console = { git = "https://github.com/mitsuhiko/console", rev = "c165689" }
+lazy_static = "1.4"
