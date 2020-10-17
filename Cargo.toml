@@ -19,3 +19,4 @@ image = "0.23"
 base64 = "0.13"
 tempfile = "3.1"
 console = { git = "https://github.com/mitsuhiko/console", rev = "c165689" }
+lazy_static = "1.4"

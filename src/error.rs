@@ -14,7 +14,9 @@ pub enum ViuError {
     /// Error while creating temp files
     Tempfile(tempfile::PersistError),
     /// Errenous response received from Kitty
-    Kitty(Vec<console::Key>),
+    KittyResponse(Vec<console::Key>),
+    /// Kitty protocol not supported
+    KittyNotSupported,
 }
 
 impl std::error::Error for ViuError {}
@@ -50,7 +52,8 @@ impl std::fmt::Display for ViuError {
             ViuError::Crossterm(e) => write!(f, "Crossterm error: {}", e),
             ViuError::InvalidConfiguration(s) => write!(f, "Invalid Configuration: {}", s),
             ViuError::Tempfile(e) => write!(f, "Tempfile error: {}", e),
-            ViuError::Kitty(keys) => write!(f, "Kitty response: {:?}", keys),
+            ViuError::KittyResponse(keys) => write!(f, "Kitty response: {:?}", keys),
+            ViuError::KittyNotSupported => write!(f, "Kitty graphics protocol not supported"),
         }
     }
 }

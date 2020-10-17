@@ -1,17 +1,24 @@
 use crate::error::{ViuError, ViuResult};
 use crate::printer::Printer;
 use console::{Key, Term};
+use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
+use crossterm::execute;
 use image::GenericImageView;
+use lazy_static::lazy_static;
 use std::io::Write;
 
 pub struct KittyPrinter {}
 
+lazy_static! {
+    static ref KITTY_SUPPORT: KittySupport = has_kitty_support();
+}
+
 impl Printer for KittyPrinter {
     fn print(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
-        match has_kitty_support() {
+        match *KITTY_SUPPORT {
             KittySupport::None => {
                 //give up, print blocks
-                todo!()
+                Err(ViuError::KittyNotSupported)
             }
             KittySupport::Local => {
                 //print from file
@@ -101,12 +108,12 @@ fn has_local_support() -> ViuResult {
         }
     }
 
-    Err(ViuError::Kitty(response))
+    Err(ViuError::KittyResponse(response))
 }
 
 // Print with kitty graphics protocol through a temp file
-// TODO: make sure this is fine when many files are displayed consecutively
 fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
+    //TODO: writing to a temp file can be a function
     let rgba = img.to_rgba();
     let raw_img = rgba.as_raw();
 
@@ -119,18 +126,49 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
     tmpfile.write_all(raw_img).unwrap();
     tmpfile.flush().unwrap();
 
-    // print!("\x1b_Ga=P,x={},y={}\x1b\\", config.x, config.y);
+    // delete any images at the cursor's position
+    // print!("\x1b_Ga=d,d=C\x1b\\");
+    //TODO: it might make sense to extract in fn
+
+    let mut stdout = std::io::stdout();
+    // adjust y offset
+    if config.absolute_offset {
+        if config.y >= 0 {
+            // If absolute_offset, move to (x,y).
+            execute!(&mut stdout, MoveTo(config.x, config.y as u16))?
+        } else {
+            //Negative values do not make sense.
+            return Err(ViuError::InvalidConfiguration(
+                "absolute_offset is true but y offset is negative".to_owned(),
+            ));
+        }
+    } else if config.y < 0 {
+        // MoveUp if negative
+        execute!(&mut stdout, MoveToPreviousLine(-config.y as u16))?;
+        execute!(&mut stdout, MoveRight(config.x))?;
+    } else {
+        // Move down y lines
+        for _ in 0..config.y {
+            // writeln! is used instead of MoveDown to force scrolldown
+            // observed when config.y > 0 and cursor is on the last terminal line
+            writeln!(&mut stdout)?
+        }
+        execute!(&mut stdout, MoveRight(config.x))?;
+    }
 
     print!(
-        "\x1b_Gf=32,s={},v={},c=100,r=30,a=T,t=t,X={},Y={};{}\x1b\\",
+        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t,X={},Y={};{}\x1b\\",
         img.width(),
         img.height(),
+        config.width.unwrap_or(100),
+        config.height.unwrap_or(40),
         config.x,
         config.y,
         base64::encode(path.to_str().unwrap())
     );
     println!();
-    std::io::stdout().flush().unwrap();
+    stdout.flush().unwrap();
+
     Ok(())
 }
 //TODO default_features false of console
