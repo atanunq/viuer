@@ -59,16 +59,9 @@ pub fn has_kitty_support() -> KittySupport {
 // Query the terminal whether it can display an image from a file
 fn has_local_support() -> ViuResult {
     // create a temp file that will hold a 1x1 image
-    let (mut tmpfile, path) = tempfile::Builder::new()
-        .prefix(".tmp.viuer.")
-        .rand_bytes(1)
-        .tempfile()?
-        .keep()?;
-
-    // create a 1x1 image and write it to the temp file
     let x = image::RgbaImage::new(1, 1);
-    tmpfile.write_all(x.as_raw())?;
-    tmpfile.flush()?;
+    let raw_img = x.as_raw();
+    let path = store_in_tmp_file(raw_img)?;
 
     // send the query
     print!(
@@ -116,15 +109,7 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
     //TODO: writing to a temp file can be a function
     let rgba = img.to_rgba();
     let raw_img = rgba.as_raw();
-
-    let (mut tmpfile, path) = tempfile::Builder::new()
-        .prefix(".tmp.viuer.")
-        .rand_bytes(1)
-        .tempfile()?
-        .keep()?;
-
-    tmpfile.write_all(raw_img).unwrap();
-    tmpfile.flush().unwrap();
+    let path = store_in_tmp_file(raw_img)?;
 
     // delete any images at the cursor's position
     // print!("\x1b_Ga=d,d=C\x1b\\");
@@ -160,6 +145,7 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
         "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t,X={},Y={};{}\x1b\\",
         img.width(),
         img.height(),
+        //TODO: get real width + height
         config.width.unwrap_or(100),
         config.height.unwrap_or(40),
         config.x,
@@ -172,3 +158,17 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
     Ok(())
 }
 //TODO default_features false of console
+
+// Create a file in temporary dir and write the byte slice to it.
+// Since the file is persisted, the user is responsible for deleting it afterwards.
+fn store_in_tmp_file(raw_img: &[u8]) -> std::result::Result<std::path::PathBuf, ViuError> {
+    let (mut tmpfile, path) = tempfile::Builder::new()
+        .prefix(".tmp.viuer.")
+        .rand_bytes(1)
+        .tempfile()?
+        .keep()?;
+
+    tmpfile.write_all(raw_img).unwrap();
+    tmpfile.flush().unwrap();
+    Ok(path)
+}
