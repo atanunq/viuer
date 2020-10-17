@@ -21,9 +21,13 @@
 //! print_from_file("img.jpg", &conf).expect("Image printing failed.");
 //! ```
 
-pub use error::ViuError;
+use crossterm::cursor::{position, MoveToNextLine};
+use crossterm::execute;
+use crossterm::tty::IsTty;
 use error::ViuResult;
 use image::{DynamicImage, GenericImageView};
+use printer::Printer;
+use std::io::Write;
 
 mod config;
 mod error;
@@ -31,7 +35,7 @@ mod printer;
 mod utils;
 
 pub use config::Config;
-use printer::Printer;
+pub use error::ViuError;
 pub use utils::terminal_size;
 
 /// Default printing method. Uses upper and lower half blocks to fill terminal cells.
@@ -57,6 +61,11 @@ pub use utils::terminal_size;
 /// print(&img, &Config::default()).expect("Image printing failed.");
 /// ```
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
+    let mut stdout = std::io::stdout();
+    let is_tty = stdout.is_tty();
+    // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
+    let cursor_pos = if is_tty { position().ok() } else { None };
+
     //TODO: Resizing should be revamped, kitty's printer is not getting terminal size
     let kitty_print = printer::KittyPrinter::print(img, config);
 
@@ -69,10 +78,20 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
         } else {
             img
         };
-        printer::BlockPrinter::print(img, config)
-    } else {
-        kitty_print
+        printer::BlockPrinter::print(img, config)?;
     }
+
+    // if the cursor has ended above where it started, bring it back down to its lowest position
+    if is_tty {
+        if let Some((_, pos_y)) = cursor_pos {
+            let (_, new_pos_y) = position()?;
+            if pos_y > new_pos_y {
+                execute!(&mut stdout, MoveToNextLine(pos_y - new_pos_y))?;
+            };
+        }
+    };
+
+    Ok(())
 }
 
 /// Helper method that reads a file, tries to decode it and prints it.
