@@ -10,7 +10,7 @@ use std::io::Write;
 pub struct KittyPrinter {}
 
 lazy_static! {
-    static ref KITTY_SUPPORT: KittySupport = has_kitty_support();
+    pub static ref KITTY_SUPPORT: KittySupport = has_kitty_support();
 }
 
 impl Printer for KittyPrinter {
@@ -32,18 +32,19 @@ impl Printer for KittyPrinter {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
+///
 pub enum KittySupport {
-    // The Kitty graphics protocol cannot be used
+    /// The Kitty graphics protocol cannot be used.
     None,
-    // Kitty is running locally, data can be shared through a file
+    /// Kitty is running locally, data can be shared through a file.
     Local,
-    // Kitty is not running locally, data has to be sent through escape codes
+    /// Kitty is not running locally, data has to be sent through escape codes.
     Remote,
 }
 
 ///
-pub fn has_kitty_support() -> KittySupport {
+fn has_kitty_support() -> KittySupport {
     if let Ok(term) = std::env::var("TERM") {
         if term.contains("kitty") {
             if has_local_support().is_ok() {
@@ -105,15 +106,11 @@ fn has_local_support() -> ViuResult {
 }
 
 // Print with kitty graphics protocol through a temp file
+// TODO: try with kitty's supported compression
 fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
-    //TODO: writing to a temp file can be a function
     let rgba = img.to_rgba();
     let raw_img = rgba.as_raw();
     let path = store_in_tmp_file(raw_img)?;
-
-    // delete any images at the cursor's position
-    // print!("\x1b_Ga=d,d=C\x1b\\");
-    //TODO: it might make sense to extract in fn
 
     let mut stdout = std::io::stdout();
     // adjust y offset
@@ -141,13 +138,17 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
         execute!(&mut stdout, MoveRight(config.x))?;
     }
 
+    // get the desired width and height
+    // TODO: create a calc_dimensions function that does the same without actually modifying an image.
+    //  Also, the h returend is 2* what we want, because of blocks' height
+    let (w, h) = crate::resize(img, config.width, config.height).dimensions();
+
     print!(
         "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t,X={},Y={};{}\x1b\\",
         img.width(),
         img.height(),
-        //TODO: get real width + height
-        config.width.unwrap_or(100),
-        config.height.unwrap_or(40),
+        w,
+        h / 2,
         config.x,
         config.y,
         base64::encode(path.to_str().unwrap())

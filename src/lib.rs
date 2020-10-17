@@ -36,6 +36,7 @@ mod utils;
 
 pub use config::Config;
 pub use error::ViuError;
+pub use printer::{has_kitty_support, KittySupport};
 pub use utils::terminal_size;
 
 /// Default printing method. Uses upper and lower half blocks to fill terminal cells.
@@ -66,7 +67,6 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
     // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
     let cursor_pos = if is_tty { position().ok() } else { None };
 
-    //TODO: Resizing should be revamped, kitty's printer is not getting terminal size
     let kitty_print = printer::KittyPrinter::print(img, config);
 
     if kitty_print.is_err() {
