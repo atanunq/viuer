@@ -46,7 +46,8 @@ pub fn terminal_size() -> (u16, u16) {
     DEFAULT_TERM_SIZE
 }
 
-// Given width & height of an image, return it's dimensions so that it can fit within given bounds
+/// Given width & height of an image, scale the size so that it can fit within given bounds
+/// while preserving aspect ratio. Will scale both up and down.
 pub fn fit_dimensions(width: u32, height: u32, bound_width: u32, bound_height: u32) -> (u32, u32) {
     let ratio = width * bound_height;
     let nratio = bound_width * height;
@@ -86,5 +87,7 @@ mod tests {
         assert_eq!((30, 20), fit_dimensions(240, 160, 30, 100));
         // ratio 5:7
         assert_eq!((100, 140), fit_dimensions(300, 420, 320, 140));
+        // ratio 4:3
+        assert_eq!((32, 24), fit_dimensions(4, 3, 80, 24));
     }
 }
