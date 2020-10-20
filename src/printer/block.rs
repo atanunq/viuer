@@ -1,6 +1,5 @@
 use crate::error::{ViuError, ViuResult};
 use crate::printer::Printer;
-use crate::utils::terminal_size;
 use crate::Config;
 
 use ansi_colours::ansi256_from_rgb;
@@ -56,7 +55,7 @@ impl Printer for BlockPrinter {
         // resize the image so that it fits in the constraints, if any
         let resized_img;
         let img = if config.resize {
-            resized_img = resize(&img, config.width, config.height);
+            resized_img = super::resize(&img, config.width, config.height);
             &resized_img
         } else {
             img
@@ -141,52 +140,6 @@ impl Printer for BlockPrinter {
 
         // do a final write to stdout to print last row if length is odd, and reset cursor position
         print_buffer(&stdout, &mut out_buffer)
-    }
-}
-
-// Helper method that resizes a [image::DynamicImage]
-// to make it fit in the terminal.
-//
-// The behaviour is different based on the provided width and height:
-// - If both are None, the image will be resized to fit in the terminal. Aspect ratio is preserved.
-// - If only one is provided and the other is None, it will fit the image in the provided boundary. Aspect ratio is preserved.
-// - If both are provided, the image will be resized to match the new size. Aspect ratio is **not** preserved.
-//
-// Note that if the image is smaller than the available space, no transformations will be made.
-fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
-    let (mut print_width, mut print_height) = img.dimensions();
-
-    if let Some(w) = width {
-        print_width = w;
-    }
-    if let Some(h) = height {
-        //since 2 pixels are printed per terminal cell, an image with twice the height can be fit
-        print_height = 2 * h;
-    }
-    match (width, height) {
-        (None, None) => {
-            let (term_w, term_h) = terminal_size();
-            let w = u32::from(term_w);
-            // One less row because two reasons:
-            // - the prompt after executing the command will take a line
-            // - gifs flicker
-            let h = u32::from(term_h - 1);
-            if print_width > w {
-                print_width = w;
-            }
-            if print_height > h {
-                print_height = 2 * h;
-            }
-            img.thumbnail(print_width, print_height)
-        }
-        (Some(_), None) | (None, Some(_)) => {
-            // Either width or height is specified, resizing and preserving aspect ratio
-            img.thumbnail(print_width, print_height)
-        }
-        (Some(_), Some(_)) => {
-            // Both width and height are specified, resizing without preserving aspect ratio
-            img.thumbnail_exact(print_width, print_height)
-        }
     }
 }
 
@@ -303,83 +256,4 @@ fn get_color_from_pixel(pixel: (u32, u32, Rgba<u8>), truecolor: bool) -> Color {
 enum Mode {
     Top,
     Bottom,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use image::DynamicImage;
-
-    fn get_large_test_image() -> DynamicImage {
-        DynamicImage::ImageRgba8(image::RgbaImage::new(1000, 800))
-    }
-
-    fn get_small_test_image() -> DynamicImage {
-        DynamicImage::ImageRgba8(image::RgbaImage::new(20, 10))
-    }
-
-    #[test]
-    fn test_resize_none() {
-        let width = None;
-        let height = None;
-
-        let img = get_large_test_image();
-        let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 57);
-        assert_eq!(new_img.height(), 46);
-
-        let img = get_small_test_image();
-        let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 20);
-        assert_eq!(new_img.height(), 10);
-    }
-
-    #[test]
-    fn test_resize_some_none() {
-        let width = Some(100);
-        let height = None;
-
-        let img = get_large_test_image();
-        let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 100);
-        assert_eq!(new_img.height(), 80);
-
-        let img = get_small_test_image();
-        let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 20);
-        assert_eq!(new_img.height(), 10);
-    }
-
-    #[test]
-    fn test_resize_none_some() {
-        let width = None;
-        let mut height = Some(90);
-
-        let img = get_large_test_image();
-        let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 225);
-        assert_eq!(new_img.height(), 180);
-
-        height = Some(4);
-        let img = get_small_test_image();
-        let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 16);
-        assert_eq!(new_img.height(), 8);
-    }
-
-    #[test]
-    fn test_resize_some_some() {
-        let width = Some(15);
-        let height = Some(9);
-
-        let img = get_large_test_image();
-        let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 15);
-        assert_eq!(new_img.height(), 18);
-
-        let img = get_small_test_image();
-        let new_img = resize(&img, width, height);
-        assert_eq!(new_img.width(), 15);
-        assert_eq!(new_img.height(), 18);
-    }
 }
