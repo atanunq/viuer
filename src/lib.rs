@@ -17,7 +17,7 @@
 //!     height: Some(30),
 //!     ..Default::default()
 //! };
-//! // will resize the image to fit in 40x60 terminal cells and print it
+//! // will resize the image to fit in 40x30 terminal cells and print it
 //! print_from_file("img.jpg", &conf).expect("Image printing failed.");
 //! ```
 
@@ -36,7 +36,7 @@ mod utils;
 
 pub use config::Config;
 pub use error::ViuError;
-pub use printer::{has_kitty_support, KittySupport};
+pub use printer::{find_best_fit, fit_dimensions, has_kitty_support, resize, KittySupport};
 pub use utils::terminal_size;
 
 /// Default printing method. Uses upper and lower half blocks to fill terminal cells.
