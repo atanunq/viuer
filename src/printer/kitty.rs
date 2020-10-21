@@ -1,5 +1,6 @@
 use crate::error::{ViuError, ViuResult};
 use crate::printer::Printer;
+//TODO default_features=false for console
 use console::{Key, Term};
 use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
 use crossterm::execute;
@@ -159,7 +160,6 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
 
     Ok(())
 }
-//TODO default_features false of console
 
 // Create a file in temporary dir and write the byte slice to it.
 // Since the file is persisted, the user is responsible for deleting it afterwards.

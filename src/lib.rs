@@ -1,20 +1,24 @@
 #![deny(missing_docs)]
 
-//! Small library to display images in the terminal.
+//! Library to display images in the terminal.
 //!
 //! This library contains functionality extracted from the [`viu`](https://github.com/atanunq/viu) crate.
 //! It aims to provide an easy to use interface to print images in the terminal. Uses some abstractions
-//! provided by the [`image`] crate.
+//! provided by the [`image`] crate. The [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
+//! is partially supported. It is used by default. If the terminal doesn't support it, `viuer` will fallback
+//! to using regular half blocks instead (▄ and ▀).
 //!
 //! ## Basic Usage
-//! The example below shows how to print the image `img.jpg` in 40x30 terminal cells, starting at the
-//! top left corner. Since `viuer` uses half blocks by default (▄ and ▀), it will be able to fit a
-//! 40x60 image in 40x30 cells. Options are available through the [Config] struct.
+//! The example below shows how to print the image `img.jpg` in 40x30 terminal cells, with vertical
+//! offset of 4 and horizontal of 10, starting from the top left corner. All options are available
+//! through the [Config] struct.
 //! ```no_run
 //! use viuer::{Config, print_from_file};
 //! let conf = Config {
 //!     width: Some(40),
 //!     height: Some(30),
+//!     x: 10,
+//!     y: 4,
 //!     ..Default::default()
 //! };
 //! // will resize the image to fit in 40x30 terminal cells and print it
@@ -36,11 +40,12 @@ mod utils;
 
 pub use config::Config;
 pub use error::ViuError;
-pub use printer::{find_best_fit, fit_dimensions, has_kitty_support, resize, KittySupport};
+pub use printer::{find_best_fit, has_kitty_support, resize, KittySupport};
 pub use utils::terminal_size;
 
-/// Default printing method. Uses upper and lower half blocks to fill terminal cells.
+/// Default printing method. Uses Kitty protocol, if supported, and half blocks otherwise.
 ///
+/// If printing the image moved the cursor above its initial position, it will be brought back down.
 /// ## Example
 /// The snippet below reads all of stdin, decodes it with the [`image`] crate
 /// and prints it to the terminal. The image will also be resized to fit in the terminal.

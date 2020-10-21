@@ -15,7 +15,7 @@ pub trait Printer {
 }
 
 /// Resize a [image::DynamicImage] so that it fits within optional width and height bounds.
-/// If none are provided, terminal size is used instead. Uses [find_best_fit] underneath.
+/// If none are provided, terminal size is used instead.
 pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
     let (w, h) = find_best_fit(img, width, height);
 
@@ -24,7 +24,7 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
     img.resize_exact(w, 2 * h, image::imageops::FilterType::Triangle)
 }
 
-/// Figure out the best dimensions for the printed image, based on user's input.
+/// Find the best dimensions for the printed image, based on user's input.
 /// Returns the dimensions of how the image should be printed in **terminal cells**.
 ///
 /// The behaviour is different based on the provided width and height:
@@ -36,8 +36,9 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
 /// ```no_run
 /// let img = image::DynamicImage::ImageRgba8(image::RgbaImage::new(160, 80));
 /// // Use None for both dimensions to use terminal size (80x24) instead.
-/// // The image ratio is 2:1, the terminal can be split into 80x46 squares, hence the
-/// // best fit would be to use the whole width (80) and 40 height squares, equivalent to 20 terminal cells.
+/// // The image ratio is 2:1, the terminal can be split into 80x46 squares.
+/// // The best fit would be to use the whole width (80) and 40 vertical squares,
+/// // which is equivalent to 20 terminal cells.
 /// let (w, h) = viuer::find_best_fit(&img, None, None);
 /// assert_eq!(w, 80);
 /// assert_eq!(h, 20);
@@ -72,13 +73,13 @@ pub fn find_best_fit(img: &DynamicImage, width: Option<u32>, height: Option<u32>
 ///
 /// Note: input bounds are meant to hold dimensions of a terminal, where the height of a cell is
 /// twice it's width. It is best illustrated in an example:
-/// ```
-/// // Trying to fit a 100x100 image in 40x15 terminal cells. The best fit
-/// // would be to use all of the available height, 15, which is equivalent in size to
-/// // 30 consecutive cells. Hence, the returned dimensions will be 30x15.
+///
+/// Trying to fit a 100x100 image in 40x15 terminal cells. The best fit, while having an aspect
+/// ratio of 1:1, would be to use all of the available height, 15, which is
+/// equivalent in size to 30 vertical cells. Hence, the returned dimensions will be 30x15.
+///
 /// assert_eq!((30, 15), viuer::fit_dimensions(100, 100, 40, 15));
-/// ```
-pub fn fit_dimensions(width: u32, height: u32, bound_width: u32, bound_height: u32) -> (u32, u32) {
+fn fit_dimensions(width: u32, height: u32, bound_width: u32, bound_height: u32) -> (u32, u32) {
     let bound_height = 2 * bound_height;
 
     if width <= bound_width && height <= bound_height {

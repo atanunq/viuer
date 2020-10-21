@@ -7,7 +7,7 @@ pub struct Config {
     /// Enable true transparency instead of checkerboard background. Defaults to false.
     pub transparent: bool,
     /// Make the x and y offset be relative to the top left terminal corner.
-    /// If false, the y offset is relative to the row after the last printed image.
+    /// If false, the y offset is relative to the cursor's position.
     /// Defaults to true.
     pub absolute_offset: bool,
     /// X offset. Defaults to 0.
