@@ -1,5 +1,6 @@
 use crate::error::{ViuError, ViuResult};
 use crate::printer::Printer;
+use crate::Config;
 //TODO default_features=false for console
 use console::{Key, Term};
 use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
@@ -20,7 +21,7 @@ pub fn has_kitty_support() -> KittySupport {
 }
 
 impl Printer for KittyPrinter {
-    fn print(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
+    fn print(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         match *KITTY_SUPPORT {
             KittySupport::None => {
                 // give up, print blocks
@@ -113,7 +114,7 @@ fn has_local_support() -> ViuResult {
 
 // Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
-fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
+fn print_local(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     let rgba = img.to_rgba();
     let raw_img = rgba.as_raw();
     let path = store_in_tmp_file(raw_img)?;
@@ -158,7 +159,7 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
     println!();
     stdout.flush().unwrap();
 
-    Ok(())
+    Ok((w, h))
 }
 
 // Create a file in temporary dir and write the byte slice to it.

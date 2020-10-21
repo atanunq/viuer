@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::error::ViuResult;
 use crate::utils::terminal_size;
 use image::{DynamicImage, GenericImageView};
 
@@ -11,7 +12,9 @@ pub use kitty::KittyPrinter;
 pub use kitty::KittySupport;
 
 pub trait Printer {
-    fn print(img: &DynamicImage, config: &Config) -> crate::ViuResult;
+    // Print the given image in the terminal while respecting the options in the config struct.
+    // Return the dimensions of the printed image in **terminal cells**.
+    fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)>;
 }
 
 /// Resize a [image::DynamicImage] so that it fits within optional width and height bounds.

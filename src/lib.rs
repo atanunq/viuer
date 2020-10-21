@@ -66,17 +66,17 @@ pub use utils::terminal_size;
 /// let img = image::load_from_memory(&buf).expect("Data from stdin could not be decoded.");
 /// print(&img, &Config::default()).expect("Image printing failed.");
 /// ```
-pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
+pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     let mut stdout = std::io::stdout();
     let is_tty = stdout.is_tty();
     // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
     let cursor_pos = if is_tty { position().ok() } else { None };
 
-    if config.use_kitty && has_kitty_support() != KittySupport::None {
-        printer::KittyPrinter::print(img, config)?;
+    let (w, h) = if config.use_kitty && has_kitty_support() != KittySupport::None {
+        printer::KittyPrinter::print(img, config)?
     } else {
-        printer::BlockPrinter::print(img, config)?;
-    }
+        printer::BlockPrinter::print(img, config)?
+    };
 
     // if the cursor has ended above where it started, bring it back down to its lowest position
     if is_tty {
@@ -88,7 +88,7 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
         }
     };
 
-    Ok(())
+    Ok((w, h))
 }
 
 /// Helper method that reads a file, tries to decode it and prints it.
@@ -105,7 +105,7 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult {
 /// // Also, the terminal's background color will be used instead of checkerboard pattern.
 /// print_from_file("img.jpg", &conf).expect("Image printing failed.");
 /// ```
-pub fn print_from_file(filename: &str, config: &Config) -> ViuResult {
+pub fn print_from_file(filename: &str, config: &Config) -> ViuResult<(u32, u32)> {
     let img = image::io::Reader::open(filename)?
         .with_guessed_format()?
         .decode()?;

@@ -19,7 +19,7 @@ const CHECKERBOARD_BACKGROUND_DARK: (u8, u8, u8) = (102, 102, 102);
 pub struct BlockPrinter {}
 
 impl Printer for BlockPrinter {
-    fn print(img: &DynamicImage, config: &Config) -> ViuResult {
+    fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         // there are two types of buffers in this function:
         // - stdout: Buffer, which is from termcolor crate. Used to buffer all writing
         //   required to print a single image or frame. Flushed on every line
@@ -139,7 +139,10 @@ impl Printer for BlockPrinter {
         }
 
         // do a final write to stdout to print last row if length is odd, and reset cursor position
-        print_buffer(&stdout, &mut out_buffer)
+        print_buffer(&stdout, &mut out_buffer)?;
+
+        //TODO: might be +1/2 ?
+        Ok((curr_col_px, curr_row_px / 2))
     }
 }
 
