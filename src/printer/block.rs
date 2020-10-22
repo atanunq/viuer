@@ -281,6 +281,8 @@ mod tests {
         assert_eq!(w, 20);
         assert_eq!(h, 3);
     }
+
+    //TODO: failing on Windows. Why?
     #[test]
     fn test_block_printer_large() {
         let img = DynamicImage::ImageRgba8(image::RgbaImage::new(2000, 1000));
