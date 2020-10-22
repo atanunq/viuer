@@ -73,6 +73,9 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     let cursor_pos = if is_tty { position().ok() } else { None };
 
     let (w, h) = if config.use_kitty && has_kitty_support() != KittySupport::None {
+        if config.kitty_delete {
+            printer::kitty_delete()?;
+        }
         printer::KittyPrinter::print(img, config)?
     } else {
         printer::BlockPrinter::print(img, config)?

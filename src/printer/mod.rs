@@ -8,6 +8,7 @@ mod kitty;
 
 pub use block::BlockPrinter;
 pub use kitty::has_kitty_support;
+pub use kitty::kitty_delete;
 pub use kitty::KittyPrinter;
 pub use kitty::KittySupport;
 

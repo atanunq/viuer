@@ -22,6 +22,10 @@ pub struct Config {
     pub truecolor: bool,
     /// Use Kitty protocol if the terminal supports it. Defaults to true.
     pub use_kitty: bool,
+    /// Use Kitty graphics protocol to delete any images that overlap with the cursor.
+    /// Useful when stacking a lot of images on top of each other, because they keep
+    /// use up resources. Defaults to false.
+    pub kitty_delete: bool,
 }
 
 impl std::default::Default for Config {
@@ -36,6 +40,7 @@ impl std::default::Default for Config {
             height: None,
             truecolor: utils::truecolor_available(),
             use_kitty: true,
+            kitty_delete: false,
         }
     }
 }

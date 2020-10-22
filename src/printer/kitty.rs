@@ -175,3 +175,10 @@ fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuE
     tmpfile.flush().unwrap();
     Ok(path)
 }
+
+// Delete any images that intersect with the cursor. Used to improve performance, i.e
+// to "forget" old images.
+pub fn kitty_delete() -> ViuResult {
+    print!("\x1b_Ga=d,d=C\x1b\\");
+    Ok(())
+}
