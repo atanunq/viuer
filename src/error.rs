@@ -1,4 +1,4 @@
-pub type ViuResult = std::result::Result<(), ViuError>;
+pub type ViuResult<T = ()> = std::result::Result<T, ViuError>;
 
 /// Custom error type for `viu`ing operations.
 #[derive(Debug)]

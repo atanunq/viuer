@@ -19,7 +19,7 @@ const CHECKERBOARD_BACKGROUND_DARK: (u8, u8, u8) = (102, 102, 102);
 pub struct BlockPrinter {}
 
 impl Printer for BlockPrinter {
-    fn print(img: &DynamicImage, config: &Config) -> ViuResult {
+    fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         // there are two types of buffers in this function:
         // - stdout: Buffer, which is from termcolor crate. Used to buffer all writing
         //   required to print a single image or frame. Flushed on every line
@@ -51,6 +51,15 @@ impl Printer for BlockPrinter {
                 writeln!(out_buffer)?;
             }
         }
+
+        // resize the image so that it fits in the constraints, if any
+        let resized_img;
+        let img = if config.resize {
+            resized_img = super::resize(&img, config.width, config.height);
+            &resized_img
+        } else {
+            img
+        };
 
         let (width, _) = img.dimensions();
 
@@ -130,7 +139,10 @@ impl Printer for BlockPrinter {
         }
 
         // do a final write to stdout to print last row if length is odd, and reset cursor position
-        print_buffer(&stdout, &mut out_buffer)
+        print_buffer(&stdout, &mut out_buffer)?;
+
+        //TODO: might be +1/2 ?
+        Ok((width, curr_row_px / 2))
     }
 }
 
@@ -247,4 +259,44 @@ fn get_color_from_pixel(pixel: (u32, u32, Rgba<u8>), truecolor: bool) -> Color {
 enum Mode {
     Top,
     Bottom,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_block_printer_small() {
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(20, 6));
+
+        let config = Config {
+            width: Some(40),
+            height: None,
+            absolute_offset: false,
+            transparent: true,
+            ..Default::default()
+        };
+        let (w, h) = BlockPrinter::print(&img, &config).unwrap();
+
+        assert_eq!(w, 20);
+        assert_eq!(h, 3);
+    }
+
+    //TODO: failing on Windows. Why?
+    #[test]
+    fn test_block_printer_large() {
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(2000, 1000));
+
+        let config = Config {
+            width: Some(160),
+            height: None,
+            absolute_offset: false,
+            transparent: true,
+            ..Default::default()
+        };
+        let (w, h) = BlockPrinter::print(&img, &config).unwrap();
+
+        assert_eq!(w, 160);
+        assert_eq!(h, 40);
+    }
 }

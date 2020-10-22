@@ -1,5 +1,7 @@
 use crate::error::{ViuError, ViuResult};
 use crate::printer::Printer;
+use crate::Config;
+//TODO default_features=false for console
 use console::{Key, Term};
 use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
 use crossterm::execute;
@@ -19,7 +21,7 @@ pub fn has_kitty_support() -> KittySupport {
 }
 
 impl Printer for KittyPrinter {
-    fn print(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
+    fn print(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         match *KITTY_SUPPORT {
             KittySupport::None => {
                 // give up, print blocks
@@ -112,7 +114,7 @@ fn has_local_support() -> ViuResult {
 
 // Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
-fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
+fn print_local(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     let rgba = img.to_rgba();
     let raw_img = rgba.as_raw();
     let path = store_in_tmp_file(raw_img)?;
@@ -144,35 +146,32 @@ fn print_local(img: &image::DynamicImage, config: &crate::Config) -> ViuResult {
     }
 
     // get the desired width and height
-    // TODO: create a calc_dimensions function that does the same without actually modifying an image.
-    //  Also, the h returend is 2* what we want, because of blocks' height
-    let (w, h) = crate::resize(img, config.width, config.height).dimensions();
+    let (w, h) = super::find_best_fit(&img, config.width, config.height);
 
     print!(
         "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t;{}\x1b\\",
         img.width(),
         img.height(),
         w,
-        h / 2,
+        h,
         base64::encode(path.to_str().unwrap())
     );
     println!();
     stdout.flush().unwrap();
 
-    Ok(())
+    Ok((w, h))
 }
-//TODO default_features false of console
 
 // Create a file in temporary dir and write the byte slice to it.
 // Since the file is persisted, the user is responsible for deleting it afterwards.
-fn store_in_tmp_file(raw_img: &[u8]) -> std::result::Result<std::path::PathBuf, ViuError> {
+fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuError> {
     let (mut tmpfile, path) = tempfile::Builder::new()
         .prefix(".tmp.viuer.")
         .rand_bytes(1)
         .tempfile()?
         .keep()?;
 
-    tmpfile.write_all(raw_img).unwrap();
+    tmpfile.write_all(buf).unwrap();
     tmpfile.flush().unwrap();
     Ok(path)
 }
