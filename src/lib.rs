@@ -10,7 +10,7 @@
 //!
 //! ## Basic Usage
 //! The example below shows how to print the image `img.jpg` in 40x30 terminal cells, with vertical
-//! offset of 4 and horizontal of 10, starting from the top left corner. All options are available
+//! offset of 4 and horizontal of 10, starting from the top left corner. More options are available
 //! through the [Config] struct.
 //! ```no_run
 //! use viuer::{Config, print_from_file};
@@ -40,7 +40,7 @@ mod utils;
 
 pub use config::Config;
 pub use error::ViuError;
-pub use printer::{find_best_fit, has_kitty_support, resize, KittySupport};
+pub use printer::{has_kitty_support, resize, KittySupport};
 pub use utils::terminal_size;
 
 /// Default printing method. Uses Kitty protocol, if supported, and half blocks otherwise.

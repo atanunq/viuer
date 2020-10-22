@@ -36,17 +36,16 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
 /// - If both are provided, the image will be resized to match the new size. Aspect ratio is **not** preserved.
 ///
 /// Example:
-/// ```no_run
+/// Use None for both dimensions to use terminal size (80x24) instead.
+/// The image ratio is 2:1, the terminal can be split into 80x46 squares.
+/// The best fit would be to use the whole width (80) and 40 vertical squares,
+/// which is equivalent to 20 terminal cells.
+///
 /// let img = image::DynamicImage::ImageRgba8(image::RgbaImage::new(160, 80));
-/// // Use None for both dimensions to use terminal size (80x24) instead.
-/// // The image ratio is 2:1, the terminal can be split into 80x46 squares.
-/// // The best fit would be to use the whole width (80) and 40 vertical squares,
-/// // which is equivalent to 20 terminal cells.
-/// let (w, h) = viuer::find_best_fit(&img, None, None);
+/// let (w, h) = find_best_fit(&img, None, None);
 /// assert_eq!(w, 80);
 /// assert_eq!(h, 20);
-/// ```
-pub fn find_best_fit(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> (u32, u32) {
+fn find_best_fit(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> (u32, u32) {
     let (img_width, img_height) = img.dimensions();
 
     // Match user's width and height preferences
