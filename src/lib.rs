@@ -25,9 +25,7 @@
 //! print_from_file("img.jpg", &conf).expect("Image printing failed.");
 //! ```
 
-use crossterm::cursor::{position, MoveToNextLine};
 use crossterm::execute;
-use crossterm::tty::IsTty;
 use error::ViuResult;
 use image::DynamicImage;
 use printer::Printer;
@@ -45,11 +43,10 @@ pub use utils::terminal_size;
 
 /// Default printing method. Uses Kitty protocol, if supported, and half blocks otherwise.
 ///
-/// If printing the image moved the cursor above its initial position, it will be brought back down.
+/// Check the [Config] struct for all customization options.
 /// ## Example
 /// The snippet below reads all of stdin, decodes it with the [`image`] crate
 /// and prints it to the terminal. The image will also be resized to fit in the terminal.
-/// Check the [Config] struct if you would like to modify this behaviour.
 ///
 /// ```no_run
 /// use std::io::{stdin, Read};
@@ -68,9 +65,9 @@ pub use utils::terminal_size;
 /// ```
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     let mut stdout = std::io::stdout();
-    let is_tty = stdout.is_tty();
-    // Only make note of cursor position in tty. Otherwise, it disturbes output in tools like `head`, for example.
-    let cursor_pos = if is_tty { position().ok() } else { None };
+    if config.restore_cursor {
+        execute!(&mut stdout, crossterm::cursor::SavePosition)?;
+    }
 
     let (w, h) = if config.use_kitty && has_kitty_support() != KittySupport::None {
         if config.kitty_delete {
@@ -81,14 +78,8 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         printer::BlockPrinter::print(img, config)?
     };
 
-    // if the cursor has ended above where it started, bring it back down to its lowest position
-    if is_tty {
-        if let Some((_, pos_y)) = cursor_pos {
-            let (_, new_pos_y) = position()?;
-            if pos_y > new_pos_y {
-                execute!(&mut stdout, MoveToNextLine(pos_y - new_pos_y))?;
-            };
-        }
+    if config.restore_cursor {
+        execute!(&mut stdout, crossterm::cursor::RestorePosition)?;
     };
 
     Ok((w, h))
