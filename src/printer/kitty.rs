@@ -164,14 +164,14 @@ fn print_local(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u3
 
 // Create a file in temporary dir and write the byte slice to it.
 // Since the file is persisted, the user is responsible for deleting it afterwards.
-fn store_in_tmp_file(raw_img: &[u8]) -> std::result::Result<std::path::PathBuf, ViuError> {
+fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuError> {
     let (mut tmpfile, path) = tempfile::Builder::new()
         .prefix(".tmp.viuer.")
         .rand_bytes(1)
         .tempfile()?
         .keep()?;
 
-    tmpfile.write_all(raw_img).unwrap();
+    tmpfile.write_all(buf).unwrap();
     tmpfile.flush().unwrap();
     Ok(path)
 }

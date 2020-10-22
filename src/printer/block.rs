@@ -142,7 +142,7 @@ impl Printer for BlockPrinter {
         print_buffer(&stdout, &mut out_buffer)?;
 
         //TODO: might be +1/2 ?
-        Ok((curr_col_px, curr_row_px / 2))
+        Ok((width, curr_row_px / 2))
     }
 }
 
@@ -259,4 +259,42 @@ fn get_color_from_pixel(pixel: (u32, u32, Rgba<u8>), truecolor: bool) -> Color {
 enum Mode {
     Top,
     Bottom,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_block_printer_small() {
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(20, 6));
+
+        let config = Config {
+            width: Some(40),
+            height: None,
+            absolute_offset: false,
+            transparent: true,
+            ..Default::default()
+        };
+        let (w, h) = BlockPrinter::print(&img, &config).unwrap();
+
+        assert_eq!(w, 20);
+        assert_eq!(h, 3);
+    }
+    #[test]
+    fn test_block_printer_large() {
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(2000, 1000));
+
+        let config = Config {
+            width: Some(160),
+            height: None,
+            absolute_offset: false,
+            transparent: true,
+            ..Default::default()
+        };
+        let (w, h) = BlockPrinter::print(&img, &config).unwrap();
+
+        assert_eq!(w, 160);
+        assert_eq!(h, 40);
+    }
 }
