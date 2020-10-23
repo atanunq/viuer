@@ -15,7 +15,7 @@ For a demo of the library's usage and example screenshots, see [`viu`](https://g
 
 ```toml
 # in Cargo.toml, under [dependencies]
-viuer = "0.1"
+viuer = "0.2"
 ```
 ```rust
 // in src/main.rs
