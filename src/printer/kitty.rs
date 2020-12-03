@@ -8,6 +8,7 @@ use crossterm::execute;
 use image::GenericImageView;
 use lazy_static::lazy_static;
 use std::io::Write;
+use std::io::{Error, ErrorKind};
 
 pub struct KittyPrinter {}
 
@@ -130,10 +131,13 @@ fn print_local(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u3
         img.height(),
         w,
         h,
-        base64::encode(path.to_str().unwrap())
+        base64::encode(path.to_str().ok_or_else(|| ViuError::IO(Error::new(
+            ErrorKind::Other,
+            "Could not convert path to &str"
+        )))?)
     )?;
     writeln!(stdout)?;
-    stdout.flush().unwrap();
+    stdout.flush()?;
 
     Ok((w, h))
 }
@@ -185,8 +189,8 @@ fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuE
         // Kitty does this automatically after printing from a temp file.
         .keep()?;
 
-    tmpfile.write_all(buf).unwrap();
-    tmpfile.flush().unwrap();
+    tmpfile.write_all(buf)?;
+    tmpfile.flush()?;
     Ok(path)
 }
 
