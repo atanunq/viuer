@@ -38,7 +38,7 @@ mod utils;
 
 pub use config::Config;
 pub use error::ViuError;
-pub use printer::{has_kitty_support, resize, KittySupport};
+pub use printer::{get_kitty_support, resize, KittySupport};
 pub use utils::terminal_size;
 
 /// Default printing method. Uses Kitty protocol, if supported, and half blocks otherwise.
@@ -69,9 +69,9 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         execute!(&mut stdout, crossterm::cursor::SavePosition)?;
     }
 
-    let (w, h) = if config.use_kitty && has_kitty_support() != KittySupport::None {
+    let (w, h) = if config.use_kitty && get_kitty_support() != KittySupport::None {
         if config.kitty_delete {
-            printer::kitty_delete()?;
+            printer::kitty_delete();
         }
         printer::KittyPrinter::print(img, config)?
     } else {

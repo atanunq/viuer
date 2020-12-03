@@ -1,7 +1,7 @@
 use crate::error::{ViuError, ViuResult};
+use crate::printer::find_best_fit;
 use crate::printer::Printer;
 use crate::Config;
-//TODO default_features=false for console
 use console::{Key, Term};
 use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
 use crossterm::execute;
@@ -12,17 +12,17 @@ use std::io::Write;
 pub struct KittyPrinter {}
 
 lazy_static! {
-    pub static ref KITTY_SUPPORT: KittySupport = check_kitty_support();
+    static ref KITTY_SUPPORT: KittySupport = check_kitty_support();
 }
 
 /// Returns the terminal's support for the Kitty graphics protocol.
-pub fn has_kitty_support() -> KittySupport {
+pub fn get_kitty_support() -> KittySupport {
     *KITTY_SUPPORT
 }
 
 impl Printer for KittyPrinter {
     fn print(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
-        match *KITTY_SUPPORT {
+        match get_kitty_support() {
             KittySupport::None => {
                 // give up, print blocks
                 Err(ViuError::KittyNotSupported)
@@ -33,7 +33,7 @@ impl Printer for KittyPrinter {
             }
             KittySupport::Remote => {
                 // print through escape codes
-                todo!()
+                print_remote(img, config)
             }
         }
     }
@@ -86,6 +86,7 @@ fn has_local_support() -> ViuResult {
     let term = Term::stdout();
     let mut response = Vec::new();
 
+    // TODO: could use a queue of length 3
     while let Ok(key) = term.read_key() {
         // the response will end with Esc('x1b'), followed by Backslash('\')
         let should_break = key == Key::UnknownEscSeq(vec!['\\']);
@@ -102,11 +103,8 @@ fn has_local_support() -> ViuResult {
         Key::UnknownEscSeq(vec!['\\']),
     ];
 
-    // check whether the last 3 Keys match the expected
-    for x in response.windows(3).rev().take(1) {
-        if x == expected {
-            return Ok(());
-        }
+    if response.len() >= expected.len() && response[response.len() - 3..] == expected {
+        return Ok(());
     }
 
     Err(ViuError::KittyResponse(response))
@@ -115,16 +113,88 @@ fn has_local_support() -> ViuResult {
 // Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
 fn print_local(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
-    let rgba = img.to_rgba();
+    let rgba = img.to_rgba8();
     let raw_img = rgba.as_raw();
     let path = store_in_tmp_file(raw_img)?;
 
     let mut stdout = std::io::stdout();
-    // adjust offset
+    adjust_offset(&mut stdout, config)?;
+
+    // get the desired width and height
+    let (w, h) = find_best_fit(&img, config.width, config.height);
+
+    write!(
+        stdout,
+        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t;{}\x1b\\",
+        img.width(),
+        img.height(),
+        w,
+        h,
+        base64::encode(path.to_str().unwrap())
+    )?;
+    writeln!(stdout)?;
+    stdout.flush().unwrap();
+
+    Ok((w, h))
+}
+
+// Print with escape codes
+// TODO: try compression
+fn print_remote(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+    let rgba = img.to_rgba8();
+    let raw = rgba.as_raw();
+    let encoded = base64::encode(raw);
+    let mut iter = encoded.chars().peekable();
+
+    let mut stdout = std::io::stdout();
+    adjust_offset(&mut stdout, config)?;
+
+    let (w, h) = find_best_fit(&img, config.width, config.height);
+
+    let first_chunk: String = iter.by_ref().take(4096).collect();
+
+    // write the first chunk, which describes the image
+    write!(
+        stdout,
+        "\x1b_Gf=32,a=T,t=d,s={},v={},c={},r={},m=1;{}\x1b\\",
+        img.width(),
+        img.height(),
+        w,
+        h,
+        first_chunk
+    )?;
+
+    // write all the chunks, each containing 4096 bytes of data
+    while iter.peek().is_some() {
+        let chunk: String = iter.by_ref().take(4096).collect();
+        let m = if iter.peek().is_some() { 1 } else { 0 };
+        write!(stdout, "\x1b_Gm={};{}\x1b\\", m, chunk)?;
+    }
+    writeln!(stdout)?;
+    stdout.flush()?;
+    Ok((w, h))
+}
+
+// Create a file in temporary dir and write the byte slice to it.
+fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuError> {
+    let (mut tmpfile, path) = tempfile::Builder::new()
+        .prefix(".tmp.viuer.")
+        .rand_bytes(1)
+        .tempfile()?
+        // Since the file is persisted, the user is responsible for deleting it afterwards. However,
+        // Kitty does this automatically after printing from a temp file.
+        .keep()?;
+
+    tmpfile.write_all(buf).unwrap();
+    tmpfile.flush().unwrap();
+    Ok(path)
+}
+
+fn adjust_offset(stdout: &mut impl Write, config: &Config) -> ViuResult {
     if config.absolute_offset {
         if config.y >= 0 {
             // If absolute_offset, move to (x,y).
-            execute!(&mut stdout, MoveTo(config.x, config.y as u16))?
+            execute!(stdout, MoveTo(config.x, config.y as u16))?;
         } else {
             //Negative values do not make sense.
             return Err(ViuError::InvalidConfiguration(
@@ -133,52 +203,21 @@ fn print_local(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u3
         }
     } else if config.y < 0 {
         // MoveUp if negative
-        execute!(&mut stdout, MoveToPreviousLine(-config.y as u16))?;
-        execute!(&mut stdout, MoveRight(config.x))?;
+        execute!(stdout, MoveToPreviousLine(-config.y as u16))?;
+        execute!(stdout, MoveRight(config.x))?;
     } else {
         // Move down y lines
         for _ in 0..config.y {
             // writeln! is used instead of MoveDown to force scrolldown
             // observed when config.y > 0 and cursor is on the last terminal line
-            writeln!(&mut stdout)?
+            writeln!(stdout)?;
         }
-        execute!(&mut stdout, MoveRight(config.x))?;
+        execute!(stdout, MoveRight(config.x))?;
     }
-
-    // get the desired width and height
-    let (w, h) = super::find_best_fit(&img, config.width, config.height);
-
-    print!(
-        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t;{}\x1b\\",
-        img.width(),
-        img.height(),
-        w,
-        h,
-        base64::encode(path.to_str().unwrap())
-    );
-    println!();
-    stdout.flush().unwrap();
-
-    Ok((w, h))
-}
-
-// Create a file in temporary dir and write the byte slice to it.
-// Since the file is persisted, the user is responsible for deleting it afterwards.
-fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuError> {
-    let (mut tmpfile, path) = tempfile::Builder::new()
-        .prefix(".tmp.viuer.")
-        .rand_bytes(1)
-        .tempfile()?
-        .keep()?;
-
-    tmpfile.write_all(buf).unwrap();
-    tmpfile.flush().unwrap();
-    Ok(path)
-}
-
-// Delete any images that intersect with the cursor. Used to improve performance, i.e
-// to "forget" old images.
-pub fn kitty_delete() -> ViuResult {
-    print!("\x1b_Ga=d,d=C\x1b\\");
     Ok(())
+}
+
+// Delete any images that intersect with the cursor. Used to improve performance.
+pub fn kitty_delete() {
+    print!("\x1b_Ga=D,d=C\x1b\\");
 }
