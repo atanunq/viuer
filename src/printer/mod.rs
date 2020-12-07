@@ -4,18 +4,21 @@ use crate::utils::terminal_size;
 use image::{DynamicImage, GenericImageView};
 
 mod block;
-mod kitty;
-
 pub use block::BlockPrinter;
-pub use kitty::get_kitty_support;
-pub use kitty::kitty_delete;
-pub use kitty::KittyPrinter;
-pub use kitty::KittySupport;
+
+mod kitty;
+pub use kitty::{get_kitty_support, KittyPrinter, KittySupport};
 
 pub trait Printer {
     // Print the given image in the terminal while respecting the options in the config struct.
     // Return the dimensions of the printed image in **terminal cells**.
-    fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)>;
+    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)>;
+    fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {
+        let img = image::io::Reader::open(filename)?
+            .with_guessed_format()?
+            .decode()?;
+        self.print(&img, config)
+    }
 }
 
 /// Resize a [image::DynamicImage] so that it fits within optional width and height bounds.

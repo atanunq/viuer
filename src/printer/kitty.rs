@@ -22,22 +22,29 @@ pub fn get_kitty_support() -> KittySupport {
 }
 
 impl Printer for KittyPrinter {
-    fn print(img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(&self, img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         match get_kitty_support() {
-            KittySupport::None => {
-                // give up, print blocks
-                Err(ViuError::KittyNotSupported)
-            }
+            KittySupport::None => Err(ViuError::KittyNotSupported),
             KittySupport::Local => {
+                if config.kitty_delete {
+                    kitty_delete();
+                }
                 // print from file
                 print_local(img, config)
             }
             KittySupport::Remote => {
+                if config.kitty_delete {
+                    kitty_delete();
+                }
                 // print through escape codes
                 print_remote(img, config)
             }
         }
     }
+
+    // TODO: guess_format() here in order to treat PNGs specially (f=100).
+    // Also, maybe get channel count and use f=24 or f=32 accordingly.
+    // fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {}
 }
 
 #[derive(PartialEq, Copy, Clone)]

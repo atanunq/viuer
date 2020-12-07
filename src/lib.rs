@@ -69,14 +69,9 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         execute!(&mut stdout, crossterm::cursor::SavePosition)?;
     }
 
-    let (w, h) = if config.use_kitty && get_kitty_support() != KittySupport::None {
-        if config.kitty_delete {
-            printer::kitty_delete();
-        }
-        printer::KittyPrinter::print(img, config)?
-    } else {
-        printer::BlockPrinter::print(img, config)?
-    };
+    let printer = choose_printer(config);
+
+    let (w, h) = printer.print(img, config)?;
 
     if config.restore_cursor {
         execute!(&mut stdout, crossterm::cursor::RestorePosition)?;
@@ -100,8 +95,27 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
 /// print_from_file("img.jpg", &conf).expect("Image printing failed.");
 /// ```
 pub fn print_from_file(filename: &str, config: &Config) -> ViuResult<(u32, u32)> {
-    let img = image::io::Reader::open(filename)?
-        .with_guessed_format()?
-        .decode()?;
-    print(&img, config)
+    let mut stdout = std::io::stdout();
+    if config.restore_cursor {
+        execute!(&mut stdout, crossterm::cursor::SavePosition)?;
+    }
+
+    let printer = choose_printer(config);
+
+    let (w, h) = printer.print_from_file(filename, config)?;
+
+    if config.restore_cursor {
+        execute!(&mut stdout, crossterm::cursor::RestorePosition)?;
+    };
+
+    Ok((w, h))
+}
+
+// Choose the appropriate printer to use based on user config and availability
+fn choose_printer(config: &Config) -> Box<dyn Printer> {
+    if config.use_kitty && get_kitty_support() != KittySupport::None {
+        Box::new(printer::KittyPrinter {})
+    } else {
+        Box::new(printer::BlockPrinter {})
+    }
 }

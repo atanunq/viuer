@@ -19,7 +19,7 @@ const CHECKERBOARD_BACKGROUND_DARK: (u8, u8, u8) = (102, 102, 102);
 pub struct BlockPrinter {}
 
 impl Printer for BlockPrinter {
-    fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         // there are two types of buffers in this function:
         // - stdout: Buffer, which is from termcolor crate. Used to buffer all writing
         //   required to print a single image or frame. Flushed on every line
@@ -63,7 +63,7 @@ impl Printer for BlockPrinter {
 
         let (width, _) = img.dimensions();
 
-        //TODO: position information is contained in the pixel
+        // TODO: position information is contained in the pixel
         let mut curr_col_px = 0;
         let mut curr_row_px = 0;
 
@@ -141,7 +141,7 @@ impl Printer for BlockPrinter {
         // do a final write to stdout to print last row if length is odd, and reset cursor position
         print_buffer(&stdout, &mut out_buffer)?;
 
-        //TODO: might be +1/2 ?
+        // TODO: might be +1/2 ?
         Ok((width, curr_row_px / 2))
     }
 }
@@ -276,13 +276,13 @@ mod tests {
             transparent: true,
             ..Default::default()
         };
-        let (w, h) = BlockPrinter::print(&img, &config).unwrap();
+        let (w, h) = BlockPrinter {}.print(&img, &config).unwrap();
 
         assert_eq!(w, 20);
         assert_eq!(h, 3);
     }
 
-    //TODO: failing on Windows. Why?
+    // TODO: failing on Windows. Why?
     #[test]
     fn test_block_printer_large() {
         let img = DynamicImage::ImageRgba8(image::RgbaImage::new(2000, 1000));
@@ -294,7 +294,7 @@ mod tests {
             transparent: true,
             ..Default::default()
         };
-        let (w, h) = BlockPrinter::print(&img, &config).unwrap();
+        let (w, h) = BlockPrinter {}.print(&img, &config).unwrap();
 
         assert_eq!(w, 160);
         assert_eq!(h, 40);
