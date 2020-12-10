@@ -1,10 +1,7 @@
 use crate::error::{ViuError, ViuResult};
-use crate::printer::find_best_fit;
-use crate::printer::Printer;
+use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use console::{Key, Term};
-use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
-use crossterm::execute;
 use image::GenericImageView;
 use lazy_static::lazy_static;
 use std::io::Write;
@@ -199,33 +196,6 @@ fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuE
     tmpfile.write_all(buf)?;
     tmpfile.flush()?;
     Ok(path)
-}
-
-fn adjust_offset(stdout: &mut impl Write, config: &Config) -> ViuResult {
-    if config.absolute_offset {
-        if config.y >= 0 {
-            // If absolute_offset, move to (x,y).
-            execute!(stdout, MoveTo(config.x, config.y as u16))?;
-        } else {
-            //Negative values do not make sense.
-            return Err(ViuError::InvalidConfiguration(
-                "absolute_offset is true but y offset is negative".to_owned(),
-            ));
-        }
-    } else if config.y < 0 {
-        // MoveUp if negative
-        execute!(stdout, MoveToPreviousLine(-config.y as u16))?;
-        execute!(stdout, MoveRight(config.x))?;
-    } else {
-        // Move down y lines
-        for _ in 0..config.y {
-            // writeln! is used instead of MoveDown to force scrolldown
-            // observed when config.y > 0 and cursor is on the last terminal line
-            writeln!(stdout)?;
-        }
-        execute!(stdout, MoveRight(config.x))?;
-    }
-    Ok(())
 }
 
 // Delete any images that intersect with the cursor. Used to improve performance.

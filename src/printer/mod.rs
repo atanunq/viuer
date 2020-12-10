@@ -1,13 +1,21 @@
 use crate::config::Config;
-use crate::error::ViuResult;
+use crate::error::{ViuError, ViuResult};
 use crate::utils::terminal_size;
+use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
+use crossterm::execute;
 use image::{DynamicImage, GenericImageView};
+use std::io::Write;
 
 mod block;
+
 pub use block::BlockPrinter;
 
 mod kitty;
 pub use kitty::{get_kitty_support, KittyPrinter, KittySupport};
+
+mod iterm;
+pub use iterm::iTermPrinter;
+pub use iterm::is_iterm_supported;
 
 pub trait Printer {
     // Print the given image in the terminal while respecting the options in the config struct.
@@ -107,6 +115,35 @@ fn fit_dimensions(width: u32, height: u32, bound_width: u32, bound_height: u32) 
     } else {
         (intermediate, std::cmp::max(1, bound_height / 2))
     }
+}
+
+// Move the cursor to a location from where it should start printing. Calculations are based on
+// offsets from the config.
+fn adjust_offset(stdout: &mut impl Write, config: &Config) -> ViuResult {
+    if config.absolute_offset {
+        if config.y >= 0 {
+            // If absolute_offset, move to (x,y).
+            execute!(stdout, MoveTo(config.x, config.y as u16))?;
+        } else {
+            //Negative values do not make sense.
+            return Err(ViuError::InvalidConfiguration(
+                "absolute_offset is true but y offset is negative".to_owned(),
+            ));
+        }
+    } else if config.y < 0 {
+        // MoveUp if negative
+        execute!(stdout, MoveToPreviousLine(-config.y as u16))?;
+        execute!(stdout, MoveRight(config.x))?;
+    } else {
+        // Move down y lines
+        for _ in 0..config.y {
+            // writeln! is used instead of MoveDown to force scrolldown
+            // observed when config.y > 0 and cursor is on the last terminal line
+            writeln!(stdout)?;
+        }
+        execute!(stdout, MoveRight(config.x))?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
