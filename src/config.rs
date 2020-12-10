@@ -4,7 +4,8 @@ use crate::utils;
 pub struct Config {
     /// [resize](crate::resize) the image before printing. Defaults to true.
     pub resize: bool,
-    /// Enable true transparency instead of checkerboard background. Defaults to false.
+    /// Enable true transparency instead of checkerboard background.
+    /// Available only for the block printer. Defaults to false.
     pub transparent: bool,
     /// Make the x and y offset be relative to the top left terminal corner.
     /// If false, the y offset is relative to the cursor's position.
