@@ -7,7 +7,6 @@ use image::{DynamicImage, GenericImageView};
 use std::io::Write;
 
 mod block;
-
 pub use block::BlockPrinter;
 
 mod kitty;
@@ -57,6 +56,7 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
 /// let (w, h) = find_best_fit(&img, None, None);
 /// assert_eq!(w, 80);
 /// assert_eq!(h, 20);
+//TODO: it might make more sense to change signiture from img to (width, height)
 fn find_best_fit(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> (u32, u32) {
     let (img_width, img_height) = img.dimensions();
 

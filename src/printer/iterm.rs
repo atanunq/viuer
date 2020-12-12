@@ -1,9 +1,9 @@
-use crate::error::{ViuError, ViuResult};
+use crate::error::ViuResult;
 use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
+use image::{DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
-use std::io::Write;
-use std::io::{BufReader, Error, ErrorKind, Read};
+use std::io::{BufReader, Read, Write};
 
 #[allow(non_camel_case_types)]
 pub struct iTermPrinter {}
@@ -18,56 +18,54 @@ pub fn is_iterm_supported() -> bool {
 }
 
 impl Printer for iTermPrinter {
-    fn print(&self, img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
-        let temp_file = tempfile::Builder::new()
-            .prefix(".tmp.viuer.")
-            .suffix(".jpeg")
-            .rand_bytes(1)
-            .tempfile()?;
+    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+        let (width, height) = img.dimensions();
 
-        match temp_file.path().to_str() {
-            Some(path) => {
-                img.save(path)?;
-                let (w, h) = self.print_from_file(&path, config)?;
+        // Transform the dynamic image to a PNG which can be given directly to iTerm
+        let mut png_bytes: Vec<u8> = Vec::new();
+        let _ = image::codecs::png::PngEncoder::new(&mut png_bytes).encode(
+            img.as_bytes(),
+            width,
+            height,
+            img.color(),
+        )?;
 
-                Ok((w, h))
-            }
-            None => Err(ViuError::IO(Error::new(
-                ErrorKind::Other,
-                "Could not convert path to &str",
-            ))),
-        }
+        print_buffer(img, &png_bytes[..], config)
     }
 
     fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {
         let file = std::fs::File::open(filename)?;
-        let file_len = file.metadata()?.len();
 
         // load the file content
         let mut buf_reader = BufReader::new(file);
-        let mut file_content = Vec::with_capacity(file_len as usize);
+        let mut file_content = Vec::new();
         buf_reader.read_to_end(&mut file_content)?;
 
-        // decode the image from the file content
         let img = image::load_from_memory(&file_content[..])?;
-
-        let mut stdout = std::io::stdout();
-        adjust_offset(&mut stdout, config)?;
-
-        let (w, h) = find_best_fit(&img, config.width, config.height);
-
-        writeln!(
-            stdout,
-            "\x1b]1337;File=inline=1;preserveAspectRatio=1;size={};width={};height={}:{}\x07",
-            file_len,
-            w,
-            h,
-            base64::encode(file_content)
-        )?;
-        stdout.flush()?;
-
-        Ok((w, h))
+        print_buffer(&img, &file_content[..], config)
     }
+}
+
+// This function requires both a DynamicImage, which is used to calculate dimensions,
+// and it's raw representation as a file, because that's the data iTerm needs to display it.
+fn print_buffer(img: &DynamicImage, img_content: &[u8], config: &Config) -> ViuResult<(u32, u32)> {
+    let mut stdout = std::io::stdout();
+
+    adjust_offset(&mut stdout, config)?;
+
+    let (w, h) = find_best_fit(&img, config.width, config.height);
+
+    writeln!(
+        stdout,
+        "\x1b]1337;File=inline=1;preserveAspectRatio=1;size={};width={};height={}:{}\x07",
+        img_content.len(),
+        w,
+        h,
+        base64::encode(img_content)
+    )?;
+    stdout.flush()?;
+
+    Ok((w, h))
 }
 
 // Check if the iTerm protocol can be used
