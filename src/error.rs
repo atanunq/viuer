@@ -3,13 +3,13 @@ pub type ViuResult<T = ()> = std::result::Result<T, ViuError>;
 /// Custom error type for `viu`ing operations.
 #[derive(Debug)]
 pub enum ViuError {
-    /// Error while doing transformations with the [`image`] crate.
+    /// Error while doing transformations with the [`image`] crate
     Image(image::ImageError),
-    /// Error while doing IO operations.
+    /// Error while doing IO operations
     IO(std::io::Error),
-    /// Error while doing [`crossterm`] operations.
+    /// Error while doing [`crossterm`] operations
     Crossterm(crossterm::ErrorKind),
-    /// Invalid configuration provided.
+    /// Invalid configuration provided
     InvalidConfiguration(String),
     /// Error while creating temp files
     Tempfile(tempfile::PersistError),

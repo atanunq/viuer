@@ -4,9 +4,10 @@
 //!
 //! This library contains functionality extracted from the [`viu`](https://github.com/atanunq/viu) crate.
 //! It aims to provide an easy to use interface to print images in the terminal. Uses some abstractions
-//! provided by the [`image`] crate. The [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
-//! is partially supported. It is used by default. If the terminal doesn't support it, `viuer` will fallback
-//! to using regular half blocks instead (▄ and ▀).
+//! provided by the [`image`] crate. Both the [Kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
+//! and [iTerm](https://iterm2.com/documentation-images.html) graphic protocols are supported.
+//! By default, they are used if detected. If not, `viuer` will fallback to using regular
+//! half blocks instead (▄ and ▀).
 //!
 //! ## Basic Usage
 //! The example below shows how to print the image `img.jpg` in 40x30 terminal cells, with vertical
@@ -41,7 +42,8 @@ pub use error::ViuError;
 pub use printer::{get_kitty_support, is_iterm_supported, resize, KittySupport};
 pub use utils::terminal_size;
 
-/// Default printing method. Uses Kitty protocol, if supported, and half blocks otherwise.
+/// Default printing method. Uses either iTerm or Kitty graphics protocol, if supported,
+/// and half blocks otherwise.
 ///
 /// Check the [Config] struct for all customization options.
 /// ## Example

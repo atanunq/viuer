@@ -33,7 +33,7 @@ pub trait Printer {
 pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
     let (w, h) = find_best_fit(img, width, height);
 
-    // find_best_fit returns values in terminal cells. Hence we multiply by two
+    // find_best_fit returns values in terminal cells. Hence, we multiply by two
     // because a 5x10 image can fit in 5x5 cells.
     img.resize_exact(w, 2 * h, image::imageops::FilterType::Triangle)
 }

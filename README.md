@@ -3,11 +3,15 @@ Display images in the terminal with ease.
 
 ![ci](https://github.com/atanunq/viuer/workflows/ci/badge.svg)
 
-`viuer` is a Rust library that makes it easy to show images in the terminal. It has a straightforward
-interface and is configured through a single struct. The default printing method is through
-lower half blocks (▄ or \u2585). However, [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
-is used if support for it is detected, resulting in full resolution images in the terminal.
+`viuer` is a Rust library that makes it easy to show images in the
+terminal. It has a straightforward interface and is configured
+through a single struct. The default printing method is through
+lower half blocks (▄ or \u2585). However some custom graphics
+protocols are supported. They result in full resolution images
+being displayed in specific environments:
 
+- [Kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
+- [iTerm](https://iterm2.com/documentation-images.html)
 
 For a demo of the library's usage and example screenshots, see [`viu`](https://github.com/atanunq/viu).
 
@@ -15,7 +19,7 @@ For a demo of the library's usage and example screenshots, see [`viu`](https://g
 
 ```toml
 # in Cargo.toml, under [dependencies]
-viuer = "0.2"
+viuer = "0.3"
 ```
 ```rust
 // in src/main.rs
