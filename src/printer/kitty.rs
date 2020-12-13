@@ -23,16 +23,10 @@ impl Printer for KittyPrinter {
         match get_kitty_support() {
             KittySupport::None => Err(ViuError::KittyNotSupported),
             KittySupport::Local => {
-                if config.kitty_delete {
-                    kitty_delete();
-                }
                 // print from file
                 print_local(img, config)
             }
             KittySupport::Remote => {
-                if config.kitty_delete {
-                    kitty_delete();
-                }
                 // print through escape codes
                 print_remote(img, config)
             }
@@ -196,9 +190,4 @@ fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuE
     tmpfile.write_all(buf)?;
     tmpfile.flush()?;
     Ok(path)
-}
-
-// Delete any images that intersect with the cursor. Used to improve performance.
-pub fn kitty_delete() {
-    print!("\x1b_Ga=D,d=C\x1b\\");
 }
