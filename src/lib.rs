@@ -27,7 +27,6 @@
 //! ```
 
 use crossterm::execute;
-use error::ViuResult;
 use image::DynamicImage;
 use printer::Printer;
 use std::io::Write;
@@ -38,7 +37,7 @@ mod printer;
 mod utils;
 
 pub use config::Config;
-pub use error::ViuError;
+pub use error::{ViuError, ViuResult};
 pub use printer::{get_kitty_support, is_iterm_supported, resize, KittySupport};
 pub use utils::terminal_size;
 

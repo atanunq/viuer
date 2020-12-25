@@ -1,6 +1,7 @@
+/// Custom result type for error-prone operations
 pub type ViuResult<T = ()> = std::result::Result<T, ViuError>;
 
-/// Custom error type for `viu`ing operations.
+/// Custom error enum for `viu`ing operations
 #[derive(Debug)]
 pub enum ViuError {
     /// Error while doing transformations with the [`image`] crate
