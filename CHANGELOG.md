@@ -1,5 +1,8 @@
 ## Unreleased
 
+## 0.3.1
+- Make `ViuResult` public
+
 ## 0.3.0
 - Add iTerm support and `use_iterm` Config option
 - Add support for remote Kitty printing, through escape sequences
