@@ -1,5 +1,12 @@
 Code Relay:
 
+Task #2:
+Implement this
+https://github.com/atanunq/viuer/issues/4#issue-712252749
+* already added sixel to cargo
+* Complete sixel.rs, look at example in issue
+
+---
 Task #1:
 Implement this
 https://github.com/atanunq/viuer/issues/4#issue-712252749
