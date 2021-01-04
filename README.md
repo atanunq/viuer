@@ -1,5 +1,12 @@
 Code Relay:
 
+Task #4:
+
+- Get print_sixel to compile. Get type definitions from 
+https://github.com/rabite0/hunter/blob/355d9a3101f6d8dc375807de79e368602f1cb87d/src/hunter-media.rs#L714-L745
+
+Added print_sixel to printer::mod.rs
+
 Task #3:
 Task 2 was not completed as mentioned by author, so I actually added sixel to cargo.
 

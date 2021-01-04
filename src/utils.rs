@@ -1,5 +1,6 @@
 use std::env;
 
+
 const DEFAULT_TERM_SIZE: (u16, u16) = (80, 24);
 
 pub fn truecolor_available() -> bool {

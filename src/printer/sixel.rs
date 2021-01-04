@@ -7,6 +7,39 @@ use lazy_static::lazy_static;
 use std::io::Write;
 use std::io::{Error, ErrorKind};
 
+
+
+pub fn print_sixel(&self, img: &(impl WithRaw+ImgSize)) -> MResult<()> {
+    use sixel::encoder::{Encoder, QuickFrameBuilder};
+    use sixel::optflags::EncodePolicy;
+
+    let (xpix, ypix) = img.size()?;
+
+    img.with_raw(move |raw| -> MResult<()> {
+        let sixfail = |e| format_err!("Sixel failed with: {:?}", e);
+        let encoder = Encoder::new()
+            .map_err(sixfail)?;
+
+        encoder.set_encode_policy(EncodePolicy::Fast)
+            .map_err(sixfail)?;
+        
+        let frame = QuickFrameBuilder::new()
+            .width(xpix)
+            .height(ypix)
+            .format(sixel_sys::PixelFormat::RGBA8888)
+            .pixels(raw.to_vec());
+
+        encoder.encode_bytes(frame)
+            .map_err(sixfail)?;
+
+        // No end of line printed by encoder
+        println!("");
+        println!("");
+
+        Ok(())
+    })
+}
+
 pub struct KittyPrinter {}
 
 lazy_static! {

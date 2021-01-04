@@ -12,6 +12,9 @@ pub use block::BlockPrinter;
 mod kitty;
 pub use kitty::{get_kitty_support, KittyPrinter, KittySupport};
 
+mod sixel;
+pub use self::sixel::print_sixel;
+
 mod iterm;
 pub use iterm::iTermPrinter;
 pub use iterm::is_iterm_supported;
