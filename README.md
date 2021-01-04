@@ -1,3 +1,10 @@
+Code Relay:
+
+Task #1:
+Implement this
+https://github.com/atanunq/viuer/issues/4#issue-712252749
+
+---
 # viuer
 Display images in the terminal with ease.
 
