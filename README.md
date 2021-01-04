@@ -1,5 +1,10 @@
 Code Relay:
 
+Task #3:
+Task 2 was not completed as mentioned by author, so I actually added sixel to cargo.
+
+Still need to complete sixel.rs, looking at example in issue. Right now sixel.rs is just a copy of kitty.rs
+
 Task #2:
 Implement this
 https://github.com/atanunq/viuer/issues/4#issue-712252749
