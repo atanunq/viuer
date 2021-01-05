@@ -1,9 +1,14 @@
 Code Relay:
 
+
+Task #9:
+Complete sixel::check_sixel_support
+Check for sixel compatibility in the main print method. If that is the case, call SixelPrinter, which lives in sixel.rs and implements the Printer trait.
+
 Task #8:
 
 Add SixelError to impl std::fmt::Display for ViuError .
-Check for sixel compatibility in the main print method. If that is the case, call SixelPrinter, which lives in sixel.rs and implements the Printer trait.
+
 
 Task #7:
 Remove MResult from printer sixel. Make it all ViuResult
