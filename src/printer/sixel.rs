@@ -37,15 +37,18 @@ impl WithRaw for image::DynamicImage {
     fn with_raw(&self,
         fun: impl FnOnce(&[u8]) -> MResult<()>)
         -> MResult<()> {
-    return fun(self.as_bytes());
+    fun(self.as_bytes())
 }
 }
 
 
 impl Printer for SixelPrinter {
     fn print(&self, img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
-        print_sixel(img);
-        
+        let result = print_sixel(img);
+        match result {
+            Ok(u) => Ok((img.width(),img.height())),
+            Err(e) => Err(ViuError::SixelError(e))
+        }
     }
 
 }

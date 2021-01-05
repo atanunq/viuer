@@ -1,5 +1,8 @@
 Code Relay:
 
+Task #7:
+Remove MResult from printer sixel. Make it all ViuResult
+
 Task #6:
 
 Make SixlPrinter print return a ViuResult instead of an MResult

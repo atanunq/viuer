@@ -18,6 +18,7 @@ pub enum ViuError {
     KittyResponse(Vec<console::Key>),
     /// Kitty protocol not supported
     KittyNotSupported,
+    SixelError(failure::Error)
 }
 
 impl std::error::Error for ViuError {}
