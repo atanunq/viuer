@@ -1,5 +1,9 @@
 Code Relay:
 
+Task #6:
+
+Make SixlPrinter print return a ViuResult instead of an MResult
+
 Task #5;
 
 Make a SixlPrinter struct and implement printer using

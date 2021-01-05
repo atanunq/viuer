@@ -29,6 +29,28 @@ impl ImgSize for DynamicImage {
     }
 }
 
+pub struct SixelPrinter {
+
+}
+
+impl WithRaw for image::DynamicImage {
+    fn with_raw(&self,
+        fun: impl FnOnce(&[u8]) -> MResult<()>)
+        -> MResult<()> {
+    return fun(self.as_bytes());
+}
+}
+
+
+impl Printer for SixelPrinter {
+    fn print(&self, img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+        print_sixel(img);
+        
+    }
+
+}
+
+
 
 pub fn print_sixel(img: &(impl WithRaw+ImgSize)) -> MResult<()> {
     use sixel::encoder::{Encoder, QuickFrameBuilder};
