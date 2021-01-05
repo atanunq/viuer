@@ -339,4 +339,6 @@ mod tests {
     fn test_fit_equal_to_bounds() {
         assert_eq!((80, 12), fit_dimensions(80, 24, 80, 24));
     }
+
+    
 }

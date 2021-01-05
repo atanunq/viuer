@@ -51,7 +51,7 @@ impl Printer for SixelPrinter {
 
 }
 
-pub fn print_sixel(img: &(impl WithRaw+ImgSize)) -> ViuResult {
+fn print_sixel(img: &(impl WithRaw+ImgSize)) -> ViuResult {
     use sixel::encoder::{Encoder, QuickFrameBuilder};
     use sixel::optflags::EncodePolicy;
 
@@ -110,9 +110,12 @@ pub enum SixelSupport {
     Remote,
 }
 
-// Check if Kitty protocol can be used
+// // Check if Kitty protocol can be used
 fn check_sixel_support() -> SixelSupport {
+    write!(stdout, "\x1b[0c")
+    //TODO check if value is 4
     //TODO check for actual support TASK
+    return SixelSupport::Local
     // if let Ok(term) = std::env::var("TERM") {
     //     if term.contains("kitty") {
     //         if has_local_support().is_ok() {
@@ -123,6 +126,12 @@ fn check_sixel_support() -> SixelSupport {
     //     }
     // }
     // KittySupport::None
+}
+
+#[test]
+fn pixel_support() {
+
+    check_sixel_support();
 }
 
 // Query the terminal whether it can display an image from a file
