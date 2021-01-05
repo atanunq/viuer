@@ -1,5 +1,31 @@
 Code Relay:
 
+
+Task #14:
+Complete sixel::check_sixel_support
+Check for sixel compatibility in the main print method. If that is the case, call SixelPrinter, which lives in sixel.rs and implements the Printer trait.
+- Look at the terminal requirements for libsixel https://github.com/saitoha/libsixel#terminal-requirements
+
+- This comment on mintty claims "one can detect SIXEL capability using an escape sequence" https://github.com/mintty/mintty/issues/866#issuecomment-482781112. Find out what that escape sequence is
+- Found it  https://github.com/gizak/termui/pull/233#issuecomment-478193544
+the important ANSI escape strings here are:
+
+"\033[0c" for querying the terminal capabilities - we need a 4 for sixel.
+
+We also need to know what the size of a character box is in pixels this differs from terminal to terminal:
+
+"\033[14t" gives us the terminal size in pixels
+
+"\033[18t" gives us the terminal size in cells
+
+from that we can calculate the cell size in pixels.
+
+We set the position with "\033[%d;%dH" before printing the sixel string. the position string is simply prepended.
+
+The first %d is the Y position (in cells) and the second the X position.\
+- Find a way to read value in from terminal after running escape code to check if it is 4
+- Find a way to test the escape code without writing the value to the current console.
+
 Task #13:
 Complete sixel::check_sixel_support
 Check for sixel compatibility in the main print method. If that is the case, call SixelPrinter, which lives in sixel.rs and implements the Printer trait.

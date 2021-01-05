@@ -8,6 +8,8 @@ use std::io::Write;
 use std::io::{ ErrorKind};
 use image::DynamicImage;
 use failure::{Error, format_err};
+use std::io::Read;
+use crossterm::execute;
 
 pub type MResult<T> = Result<T, Error>;
 trait WithRaw {
@@ -111,11 +113,27 @@ pub enum SixelSupport {
 }
 
 // // Check if Kitty protocol can be used
-fn check_sixel_support() -> SixelSupport {
-    write!(stdout, "\x1b[0c")
+fn check_sixel_support() -> SixelSupport{
+    let mut stdout = std::io::stdout();
+    // crossterm::terminal::enable_raw_mode();
+    execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen);
+
+    let result = write!(stdout, "\x1b[0c");
+    execute!(&mut stdout, crossterm::terminal::LeaveAlternateScreen);
+    // let mut outString = String::new();
+    // let mut bufTime = [0];
+    // std::io::stdin().read(&mut bufTime);
+    // crossterm::terminal::disable_raw_mode();
+    // std::io::stdin().read_exact(buf: &mut [u8])(&mut outString);
+    // println!("{}",bufTime[0]);
+    // SixelSupport::Local;
+    match result {
+        Ok(_) => return SixelSupport::Local,
+        Err(_) => return SixelSupport::None
+    };
     //TODO check if value is 4
     //TODO check for actual support TASK
-    return SixelSupport::Local
+    // return Ok(SixelSupport::Local);
     // if let Ok(term) = std::env::var("TERM") {
     //     if term.contains("kitty") {
     //         if has_local_support().is_ok() {
@@ -128,10 +146,13 @@ fn check_sixel_support() -> SixelSupport {
     // KittySupport::None
 }
 
-#[test]
+#[test] 
 fn pixel_support() {
-
-    check_sixel_support();
+    match check_sixel_support() {
+        SixelSupport::Local => (),
+        SixelSupport::None => assert!(false),
+        SixelSupport::Remote => ()
+    }
 }
 
 // Query the terminal whether it can display an image from a file
