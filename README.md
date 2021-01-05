@@ -1,5 +1,10 @@
 Code Relay:
 
+Task #5;
+
+Make a SixlPrinter struct and implement printer using
+sixel_print. (in printer/sixel)
+
 Task #4:
 
 - Get print_sixel to compile. Get type definitions from 

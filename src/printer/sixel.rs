@@ -5,11 +5,32 @@ use console::{Key, Term};
 use image::GenericImageView;
 use lazy_static::lazy_static;
 use std::io::Write;
-use std::io::{Error, ErrorKind};
+use std::io::{ ErrorKind};
+use image::DynamicImage;
+use failure::{Error, format_err};
+
+pub type MResult<T> = Result<T, Error>;
+trait WithRaw {
+    fn with_raw(&self,
+                fun: impl FnOnce(&[u8]) -> MResult<()>)
+                -> MResult<()>;
+}
 
 
+trait ImgSize {
+    fn size(&self) -> MResult<(usize, usize)>;
+}
 
-pub fn print_sixel(&self, img: &(impl WithRaw+ImgSize)) -> MResult<()> {
+impl ImgSize for DynamicImage {
+    fn size(&self) -> MResult<(usize, usize)> {
+        let width = self.width() as usize;
+        let height = self.height() as usize;
+        Ok((width, height))
+    }
+}
+
+
+pub fn print_sixel(img: &(impl WithRaw+ImgSize)) -> MResult<()> {
     use sixel::encoder::{Encoder, QuickFrameBuilder};
     use sixel::optflags::EncodePolicy;
 
