@@ -1,5 +1,9 @@
 Code Relay:
 
+Task #10:
+Complete sixel::check_sixel_support
+Check for sixel compatibility in the main print method. If that is the case, call SixelPrinter, which lives in sixel.rs and implements the Printer trait.
+- Look at the terminal requirements for libsixel https://github.com/saitoha/libsixel#terminal-requirements
 
 Task #9:
 Complete sixel::check_sixel_support
