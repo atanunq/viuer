@@ -38,7 +38,7 @@ mod utils;
 
 pub use config::Config;
 pub use error::{ViuError, ViuResult};
-pub use printer::{get_kitty_support, is_iterm_supported, resize, KittySupport};
+pub use printer::{get_kitty_support, is_iterm_supported, resize, KittySupport, get_sixel_support, SixelSupport};
 pub use utils::terminal_size;
 
 /// Default printing method. Uses either iTerm or Kitty graphics protocol, if supported,
@@ -118,6 +118,8 @@ fn choose_printer(config: &Config) -> Box<dyn Printer> {
         Box::new(printer::iTermPrinter {})
     } else if config.use_kitty && get_kitty_support() != KittySupport::None {
         Box::new(printer::KittyPrinter {})
+    } else if config.use_sixel && get_sixel_support() != SixelSupport::None {
+        Box::new(printer::SixelPrinter {})
     } else {
         Box::new(printer::BlockPrinter {})
     }

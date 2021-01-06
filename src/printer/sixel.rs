@@ -1,16 +1,12 @@
 use crate::error::{ViuError, ViuResult};
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::Printer;
 use crate::Config;
-use console::{Key, Term};
-use crossterm::execute;
 use failure::{format_err, Error};
 use image::DynamicImage;
 use image::GenericImageView;
 use lazy_static::lazy_static;
 use std::env;
-use std::io::ErrorKind;
 use std::io::Read;
-use std::io::Write;
 
 pub type MResult<T> = Result<T, Error>;
 trait WithRaw {
@@ -38,7 +34,7 @@ impl WithRaw for image::DynamicImage {
 }
 
 impl Printer for SixelPrinter {
-    fn print(&self, img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(&self, img: &image::DynamicImage, _config: &Config) -> ViuResult<(u32, u32)> {
         print_sixel(img).map(|_| -> (u32, u32) { (img.width(), img.height()) })
     }
 }
