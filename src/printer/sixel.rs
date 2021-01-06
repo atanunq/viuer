@@ -111,47 +111,66 @@ pub enum SixelSupport {
     /// Kitty is not running locally, data has to be sent through escape codes.
     Remote,
 }
-
-// // Check if Kitty protocol can be used
-fn check_sixel_support() -> SixelSupport{
-    let mut stdout = std::io::stdout();
-    // std::io::stdin()
-    // std::
-
-    // let term = Term::stdout();
-    // let result = term.write_str("\x1b[0c");
-    // crossterm::terminal::enable_raw_mode();
-    execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen);
-
-    let result = write!(stdout, "\x1b[0c");
-    execute!(&mut stdout, crossterm::terminal::LeaveAlternateScreen);
-    // let mut outString = String::new();
-    // let mut bufTime = [0];
-    // std::io::stdin().read(&mut bufTime);
-    // crossterm::terminal::disable_raw_mode();
-    // std::io::stdin().read_exact(buf: &mut [u8])(&mut outString);
-    // println!("{}",bufTime[0]);
-    // return SixelSupport::Local;
-    match result {
-        Ok(_) => return SixelSupport::Local,
-        Err(_) => return SixelSupport::None
-    };
-    //TODO check if value is 4
-    //TODO check for actual support TASK
-    // return Ok(SixelSupport::Local);
-    // if let Ok(term) = std::env::var("TERM") {
-    //     if term.contains("kitty") {
-    //         if has_local_support().is_ok() {
-    //             return KittySupport::Local;
-    //         } else {
-    //             return KittySupport::Remote;
-    //         }
-    //     }
-    // }
-    // KittySupport::None
+///TODO check for sixel support on windows
+#[cfg(windows)]
+fn check_sixel_support() -> SixelSupport {
+    SixelSupport::None;
 }
 
-#[test] 
+#[cfg(unix)]
+fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error>{
+    use termios::*;
+    use std::fs::write;
+    use std::io::stdin;
+    //STDOUT_FILENO
+    let file_descriptor = 1;
+    let mut term_info = Termios::from_fd(file_descriptor)?;
+    let old_iflag = term_info.c_iflag;
+    let old_lflag = term_info.c_lflag;
+    
+    term_info.c_iflag &= !(ISTRIP);
+    term_info.c_iflag &= !(INLCR);
+    term_info.c_iflag &= !(ICRNL);
+    term_info.c_iflag &= !(IGNCR);
+    term_info.c_iflag &= !(IXOFF);
+
+    term_info.c_lflag &= !(ECHO);
+    term_info.c_lflag &= !(ICANON);
+
+    tcsetattr(file_descriptor, TCSANOW,&mut term_info)?;
+    write("/dev/tty", "\x1b[0c")?;
+    let mut std_in_buffer : [u8; 256] = [0;256];
+    let size_read = stdin().read(&mut std_in_buffer)?;
+    let mut found_sixel_support = false;
+    for i in 0..size_read {
+        if std_in_buffer[i] == 52 {
+            found_sixel_support = true;
+            break;
+        }
+    }
+    term_info.c_iflag = old_iflag;
+    term_info.c_lflag = old_lflag;
+    tcsetattr(file_descriptor, TCSANOW,&mut term_info)?;
+    return Ok(if found_sixel_support {SixelSupport::Local} else { SixelSupport::None});
+}
+
+// // Check if Sixel protocol can be used
+#[cfg(unix)]
+fn check_sixel_support() -> SixelSupport{
+    //This is if we are using Xterm
+    //Need to check if ware actually using
+    //xterm
+    match xterm_check_sixel_support() {
+        Ok(support) => return support,
+        Err(_) => return SixelSupport::None
+    }
+}
+
+///Ignore this test because it 
+///only passes on systems with
+///sixel support
+#[test]
+#[ignore]
 fn pixel_support() {
     match check_sixel_support() {
         SixelSupport::Local => (),

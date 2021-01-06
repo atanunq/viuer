@@ -1,5 +1,8 @@
 Code Relay:
 
+Task #16:
+- Need to check for sixel support on windows.
+- Check if sixel is supported by looking at TERM enviornemnt variable and see if it matches a known supporting terminal.
 
 Task #15:
 
