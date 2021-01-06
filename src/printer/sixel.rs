@@ -115,6 +115,11 @@ pub enum SixelSupport {
 // // Check if Kitty protocol can be used
 fn check_sixel_support() -> SixelSupport{
     let mut stdout = std::io::stdout();
+    // std::io::stdin()
+    // std::
+
+    // let term = Term::stdout();
+    // let result = term.write_str("\x1b[0c");
     // crossterm::terminal::enable_raw_mode();
     execute!(&mut stdout, crossterm::terminal::EnterAlternateScreen);
 
@@ -126,7 +131,7 @@ fn check_sixel_support() -> SixelSupport{
     // crossterm::terminal::disable_raw_mode();
     // std::io::stdin().read_exact(buf: &mut [u8])(&mut outString);
     // println!("{}",bufTime[0]);
-    // SixelSupport::Local;
+    // return SixelSupport::Local;
     match result {
         Ok(_) => return SixelSupport::Local,
         Err(_) => return SixelSupport::None

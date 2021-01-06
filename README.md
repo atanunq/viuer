@@ -1,6 +1,47 @@
 Code Relay:
 
 
+Task #15:
+
+Found the origin of the escape code. It's an xterm specific settingsS
+https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-CSI-_-ordered-by-the-final-character_s_
+
+- Check the TERM variable to see if it is a supported term.
+- If it is xterm. Check the device attributes
+
+CSI Ps c  Send Device Attributes (Primary DA).
+Ps = 0  or omitted ⇒  request attributes from terminal.  The
+response depends on the decTerminalID resource setting.
+  ⇒  CSI ? 1 ; 2 c  ("VT100 with Advanced Video Option")
+  ⇒  CSI ? 1 ; 0 c  ("VT101 with No Options")
+  ⇒  CSI ? 4 ; 6 c  ("VT132 with Advanced Video and Graphics")
+  ⇒  CSI ? 6 c  ("VT102")
+  ⇒  CSI ? 7 c  ("VT131")
+  ⇒  CSI ? 1 2 ; Ps c  ("VT125")
+  ⇒  CSI ? 6 2 ; Ps c  ("VT220")
+  ⇒  CSI ? 6 3 ; Ps c  ("VT320")
+  ⇒  CSI ? 6 4 ; Ps c  ("VT420")
+
+The VT100-style response parameters do not mean anything by
+themselves.  VT220 (and higher) parameters do, telling the
+host what features the terminal supports:
+  Ps = 1  ⇒  132-columns.
+  Ps = 2  ⇒  Printer.
+  Ps = 3  ⇒  ReGIS graphics.
+  **Ps = 4  ⇒  Sixel graphics.**
+  Ps = 6  ⇒  Selective erase.
+  Ps = 8  ⇒  User-defined keys.
+  Ps = 9  ⇒  National Replacement Character sets.
+  Ps = 1 5  ⇒  Technical characters.
+  Ps = 1 6  ⇒  Locator port.
+  Ps = 1 7  ⇒  Terminal state interrogation.
+  Ps = 1 8  ⇒  User windows.
+  Ps = 2 1  ⇒  Horizontal scrolling.
+  Ps = 2 2  ⇒  ANSI color, e.g., VT525.
+  Ps = 2 8  ⇒  Rectangular editing.
+  Ps = 2 9  ⇒  ANSI text locator (i.e., DEC Locator mode).
+
+
 Task #14:
 Complete sixel::check_sixel_support
 Check for sixel compatibility in the main print method. If that is the case, call SixelPrinter, which lives in sixel.rs and implements the Printer trait.
