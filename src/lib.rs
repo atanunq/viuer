@@ -38,7 +38,9 @@ mod utils;
 
 pub use config::Config;
 pub use error::{ViuError, ViuResult};
-pub use printer::{get_kitty_support, is_iterm_supported, resize, KittySupport, get_sixel_support, SixelSupport};
+pub use printer::{
+    get_kitty_support, get_sixel_support, is_iterm_supported, resize, KittySupport, SixelSupport,
+};
 pub use utils::terminal_size;
 
 /// Default printing method. Uses either iTerm or Kitty graphics protocol, if supported,

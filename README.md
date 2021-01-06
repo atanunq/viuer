@@ -1,7 +1,8 @@
 Code Relay:
 
 Task #18:
-- Fix sixel printing.
+- Fix sixel printing: Stop it from printing in the top left corner
+  Works fine with jpgs, just has problems with .gifs. Is it a viu, not a viuer problem?
 - Need to check for sixel support on windows.
 - Check More terminals on the supported terminal list
 - Added: [ ] Tested: [ ] DEC VT series, VT240/VT241/VT330/VT340/VT282/VT284/VT286/VT382
