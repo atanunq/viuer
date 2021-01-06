@@ -19,7 +19,7 @@ pub enum ViuError {
     /// Kitty protocol not supported
     KittyNotSupported,
     /// Error while printing with sixel
-    SixelError(failure::Error)
+    SixelError(failure::Error),
 }
 
 impl std::error::Error for ViuError {}
@@ -57,7 +57,7 @@ impl std::fmt::Display for ViuError {
             ViuError::Tempfile(e) => write!(f, "Tempfile error: {}", e),
             ViuError::KittyResponse(keys) => write!(f, "Kitty response: {:?}", keys),
             ViuError::KittyNotSupported => write!(f, "Kitty graphics protocol not supported"),
-            ViuError::SixelError(e) => write!(f, "Sixel error: {}", e)
+            ViuError::SixelError(e) => write!(f, "Sixel error: {}", e),
         }
     }
 }
