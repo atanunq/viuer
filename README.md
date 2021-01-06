@@ -1,21 +1,22 @@
 Code Relay:
 
 Task #18:
+- Fix sixel printing.
 - Need to check for sixel support on windows.
 - Check More terminals on the supported terminal list
-- [ ] DEC VT series, VT240/VT241/VT330/VT340/VT282/VT284/VT286/VT382
-- [ ] DECterm(dxterm)
-- [ ] Kermit
-- [ ] ZSTEM 340
-- [ ] WRQ Reflection
-- [ ] RLogin (Japanese terminal emulator) http://nanno.dip.jp/softlib/man/rlogin/
-- [x] mlterm
-- [x] XTerm (compiled with --enable-sixel-graphics option)
-- [x] yaft
-- [ ] recterm (ttyrec to GIF converter) https://github.com/uobikiemukot/recterm
-- [ ] seq2gif (ttyrec to GIF converter) https://github.com/saitoha/seq2gif
-- [ ] Mintty (>= 2.6.0) https://mintty.github.io/
-- [ ] cancer https://github.com/meh/cancer/
+- Added: [ ] Tested: [ ] DEC VT series, VT240/VT241/VT330/VT340/VT282/VT284/VT286/VT382
+- Added: [ ] Tested: [ ] DECterm(dxterm)
+- Added: [ ] Tested: [ ] Kermit
+- Added: [ ] Tested: [ ] ZSTEM 340
+- Added: [ ] Tested: [ ] WRQ Reflection
+- Added: [ ] Tested: [ ] RLogin (Japanese terminal emulator) http://nanno.dip.jp/softlib/man/rlogin/
+- Added: [x] Tested: [x] mlterm
+- Added: [x] Tested: [ ] XTerm (compiled with --enable-sixel-graphics option)
+- Added: [x] Tested: [x] yaft
+- Added: [ ] Tested: [ ] recterm (ttyrec to GIF converter) https://github.com/uobikiemukot/recterm
+- Added: [ ] Tested: [ ] seq2gif (ttyrec to GIF converter) https://github.com/saitoha/seq2gif
+- Added: [ ] Tested: [ ] Mintty (>= 2.6.0) https://mintty.github.io/
+- Added: [ ] Tested: [ ] cancer https://github.com/meh/cancer/
 
 Task #17:
 - Need to check for sixel support on windows.
