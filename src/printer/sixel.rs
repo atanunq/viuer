@@ -42,7 +42,6 @@ fn print_sixel(img: &image::DynamicImage) -> ViuResult<(u32, u32)> {
 
     let y_pixel_size = get_pixel_size();
     let small_y_pixels = y_pixels as u16;
-
     Ok((
         x_pixles,
         if y_pixel_size <= 0 {
@@ -81,9 +80,6 @@ fn get_pixel_size() -> u16 {
         ws_ypixel: 0,
     };
     unsafe {
-        if !libc::isatty(1) != 0 {
-            return 0;
-        }
         if libc::ioctl(1, TIOCGWINSZ, &size_out) != 0 {
             return 0;
         }
@@ -123,6 +119,28 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     SixelSupport::None
 }
 
+// Parsing the escape code sequence
+// see
+// http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
+// section 5.4.2
+// about parsing Parameter string format
+// and section
+// and   8.3.16  for the definition of CSI (spoiler alert, it's Escape [)
+// Note: In ECMA-048 docs,  05/11 is the same as 0x5B which is the hex ascii code for [
+// And see
+// https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-CSI-_-ordered-by-the-final-character_s_
+// CSI Ps c  Send Device Attributes (Primary DA).
+enum XTERMSupportParserState {
+    ExpectCSIESC,
+    ExpectCSIOpenBracket,
+    ExpectQuestionMark,
+    ParseParameter,
+    ParseParameterNotFour,
+    ParseParameterMightBeFour,
+    InvalidState,
+    FoundFour,
+}
+
 #[cfg(unix)]
 fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     use std::fs::write;
@@ -151,18 +169,73 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     write("/dev/tty", "\x1b[0c")?;
     let mut std_in_buffer: [u8; 256] = [0; 256];
     let size_read = stdin().read(&mut std_in_buffer)?;
-    let mut found_sixel_support = false;
+    let mut state = XTERMSupportParserState::ExpectCSIESC;
     for i in 0..size_read {
-        //52 is ascii for 4
-        if std_in_buffer[i] == 52 {
-            found_sixel_support = true;
-            break;
+        let current_char = std_in_buffer[i];
+        use XTERMSupportParserState::{
+            ExpectCSIESC, ExpectCSIOpenBracket, ExpectQuestionMark, FoundFour, InvalidState,
+            ParseParameter, ParseParameterMightBeFour, ParseParameterNotFour,
+        };
+
+        match state {
+            ExpectCSIESC => {
+                //ascii for ESC
+                if current_char != 27 {
+                    state = InvalidState;
+                    break;
+                }
+                state = ExpectCSIOpenBracket;
+            }
+            ExpectCSIOpenBracket => {
+                //ascii for [
+                if current_char != 91 {
+                    state = InvalidState;
+                    break;
+                }
+                state = ExpectQuestionMark;
+            }
+            ExpectQuestionMark => {
+                //ascii for ?
+                if current_char != 63 {
+                    state = InvalidState;
+                    break;
+                }
+                state = ParseParameter;
+            }
+            //ascii for 4
+            ParseParameter => {
+                state = if current_char != 52 {
+                    ParseParameterNotFour
+                } else {
+                    ParseParameterMightBeFour
+                }
+            }
+            //ascii for ; which is the separator
+            ParseParameterNotFour => {
+                state = if current_char != 59 {
+                    ParseParameterNotFour
+                } else {
+                    ParseParameter
+                }
+            }
+            //59 is ascii for ; which is the separator and
+            // 99 is ascii for c which marks the end of the phrase
+            ParseParameterMightBeFour => {
+                if current_char == 59 || current_char == 99 {
+                    state = FoundFour;
+                    break;
+                }
+                state = ParseParameterNotFour;
+            }
+            InvalidState => break,
+            FoundFour => break,
         }
     }
     term_info.c_iflag = old_iflag;
     term_info.c_lflag = old_lflag;
     tcsetattr(file_descriptor, TCSANOW, &mut term_info)?;
-    Ok(if found_sixel_support {
+
+    Ok(if let XTERMSupportParserState::FoundFour = state {
         SixelSupport::Supported
     } else {
         SixelSupport::None
@@ -172,9 +245,12 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
 // // Check if Sixel protocol can be used
 fn check_sixel_support() -> SixelSupport {
     use SixelSupport::{None, Supported};
+
     match env::var("TERM").unwrap_or(String::from("None")).as_str() {
         "mlterm" => Supported,
         "yaft-256color" => Supported,
+        "st-256color" => xterm_check_sixel_support().unwrap_or(None),
+        "xterm" => xterm_check_sixel_support().unwrap_or(None),
         "xterm-256color" => xterm_check_sixel_support().unwrap_or(None),
         _ => match env::var("TERM_PROGRAM")
             .unwrap_or(String::from("None"))

@@ -9,13 +9,29 @@ Task #18:
 - Added: [ ] Tested: [ ] ZSTEM 340
 - Added: [ ] Tested: [ ] WRQ Reflection
 - Added: [ ] Tested: [ ] RLogin (Japanese terminal emulator) http://nanno.dip.jp/softlib/man/rlogin/
+ I do not speak japanese.
 - Added: [x] Tested: [x] mlterm
-- Added: [x] Tested: [ ] XTerm (compiled with --enable-sixel-graphics option)
+- Added: [x] Tested: [x] XTerm (compiled with --enable-sixel-graphics option)
 - Added: [x] Tested: [x] yaft
-- Added: [ ] Tested: [ ] recterm (ttyrec to GIF converter) https://github.com/uobikiemukot/recterm
+- Added: [x] Tested: [-] recterm (ttyrec to GIF converter) https://github.com/uobikiemukot/recterm
+Works in recterm but has top left screen glitch
 - Added: [ ] Tested: [ ] seq2gif (ttyrec to GIF converter) https://github.com/saitoha/seq2gif
 - Added: [ ] Tested: [ ] Mintty (>= 2.6.0) https://mintty.github.io/
 - Added: [ ] Tested: [ ] cancer https://github.com/meh/cancer/
+ Could not get to compile
+- Added: [x] Tested: [x] wezterm https://github.com/wez/wezterm
+- Added: [x] Tested: [-] aminal https://github.com/liamg/aminal
+ Does not pass sixel support check. And when I fake a succes support, it still doesn't work.
+ Does this require a specific compile option for sixel support?
+- Added: [ ] Tested: [ ] iTerm2 (>= 3.0.0) https://gitlab.com/gnachman/iterm2
+- Added: [x] Tested: [x] st-sixel 
+Not in https://github.com/galatolofederico/st-sixel, but does work in https://github.com/charlesdaniels/st
+Added by hackerb9, https://github.com/hackerb9/lsix/issues/32
+- Added: [ ] Tested: [ ] DomTerm https://github.com/PerBothner/DomTerm
+ Could not get this to compile
+- Added: [ ] Tested: [ ] yaft-cocoa https://github.com/uobikiemukot/yaft-cocoa
+- Added: [ ] Tested: [-] toyterm https://github.com/algon-320/toyterm
+ Doesn't work. Says unsupported \E\ and spits out gibberish that I assume is the sixel image source.
 
 Task #17:
 - Need to check for sixel support on windows.
