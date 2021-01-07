@@ -5,11 +5,9 @@ use image::DynamicImage;
 use image::GenericImageView;
 use lazy_static::lazy_static;
 use std::env;
-    use std::io::{Read, Write};
+use std::io::{Read, Write};
 
-pub struct SixelPrinter {
-}
-
+pub struct SixelPrinter {}
 
 impl Printer for SixelPrinter {
     fn print(&self, img: &DynamicImage, _config: &Config) -> ViuResult<(u32, u32)> {
@@ -20,7 +18,6 @@ impl Printer for SixelPrinter {
         print_sixel_from_file(filename)
     }
 }
-
 
 fn print_sixel(img: &image::DynamicImage) -> ViuResult<(u32, u32)> {
     use sixel::encoder::{Encoder, QuickFrameBuilder};
@@ -40,10 +37,8 @@ fn print_sixel(img: &image::DynamicImage) -> ViuResult<(u32, u32)> {
         .height(y_pixels as usize)
         .format(sixel_sys::PixelFormat::RGBA8888)
         .pixels(raw.to_vec());
-    
 
     encoder.encode_bytes(frame)?;
-
 
     // No end of line printed by encoder
     let mut stdout = std::io::stdout();
@@ -65,12 +60,10 @@ pub fn print_sixel_from_file(filename: &str) -> ViuResult<(u32, u32)> {
     encoder.set_encode_policy(EncodePolicy::Fast)?;
     encoder.encode_file(std::path::Path::new(filename))?;
 
-
     let mut stdout = std::io::stdout();
     stdout.flush()?;
     Ok((0, 0))
 }
-
 
 impl std::convert::From<sixel::status::Error> for crate::error::ViuError {
     fn from(e: sixel::status::Error) -> Self {
