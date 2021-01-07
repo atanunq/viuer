@@ -23,7 +23,7 @@ console = { version = "0.13", default-features = false }
 lazy_static = "1.4"
 sixel = "0.3.2"
 sixel-sys = "0.3.1"
-failure = "0.1.5"
 
 [target.'cfg(unix)'.dependencies]
 termios = "0.3.3"
+nix = "0.19.1"

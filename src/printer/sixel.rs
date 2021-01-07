@@ -1,84 +1,79 @@
 use crate::error::{ViuError, ViuResult};
-use crate::printer::{find_best_fit, Printer};
+use crate::printer::Printer;
 use crate::Config;
-use failure::{format_err, Error};
 use image::DynamicImage;
 use image::GenericImageView;
 use lazy_static::lazy_static;
 use std::env;
-use std::io::Read;
+    use std::io::{Read, Write};
 
-pub type MResult<T> = Result<T, Error>;
-trait WithRaw {
-    fn with_raw(&self, fun: impl FnOnce(&[u8]) -> ViuResult) -> ViuResult;
+pub struct SixelPrinter {
 }
 
-trait ImgSize {
-    fn size(&self) -> MResult<(usize, usize)>;
-}
-
-impl ImgSize for DynamicImage {
-    fn size(&self) -> MResult<(usize, usize)> {
-        let width = self.width() as usize;
-        let height = self.height() as usize;
-        Ok((width, height))
-    }
-}
-
-pub struct SixelPrinter {}
-
-impl WithRaw for image::DynamicImage {
-    fn with_raw(&self, fun: impl FnOnce(&[u8]) -> ViuResult) -> ViuResult {
-        fun(self.as_bytes())
-    }
-}
 
 impl Printer for SixelPrinter {
-    fn print(&self, img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
-        print_sixel(img, config).map(|_| -> (u32, u32) { (img.width(), img.height()) })
+    fn print(&self, img: &DynamicImage, _config: &Config) -> ViuResult<(u32, u32)> {
+        print_sixel(img)
+    }
+
+    fn print_from_file(&self, filename: &str, _config: &Config) -> ViuResult<(u32, u32)> {
+        print_sixel_from_file(filename)
     }
 }
 
-fn print_sixel(img: &image::DynamicImage, config: &Config) -> ViuResult {
+
+fn print_sixel(img: &image::DynamicImage) -> ViuResult<(u32, u32)> {
     use sixel::encoder::{Encoder, QuickFrameBuilder};
     use sixel::optflags::EncodePolicy;
 
-    let (xpix, ypix) = img.size()?;
+    let (x_pixles, y_pixels) = img.dimensions();
 
-    let (w, h) = find_best_fit(&img, config.width, config.height);
     let rgba = img.to_rgba8();
     let raw = rgba.as_raw();
 
-    let bob = w as usize;
-    let larry = h as usize;
-    print!("w : {}, h: {}", bob, larry);
+    let encoder = Encoder::new()?;
 
-    // img.with_raw(move |raw| -> ViuResult {
-    let sixfail = |e| format_err!("Sixel failed with: {:?}", e);
-    let encoder = Encoder::new().map_err(sixfail)?;
-
-    encoder
-        .set_encode_policy(EncodePolicy::Fast)
-        .map_err(sixfail)?;
+    encoder.set_encode_policy(EncodePolicy::Fast)?;
 
     let frame = QuickFrameBuilder::new()
-        .width(xpix)
-        .height(ypix)
+        .width(x_pixles as usize)
+        .height(y_pixels as usize)
         .format(sixel_sys::PixelFormat::RGBA8888)
         .pixels(raw.to_vec());
+    
 
-    encoder.encode_bytes(frame).map_err(sixfail)?;
+    encoder.encode_bytes(frame)?;
+
 
     // No end of line printed by encoder
-    println!("");
-    println!("");
+    let mut stdout = std::io::stdout();
+    stdout.flush()?;
 
-    Ok(())
-    // })
+    Ok((x_pixles, y_pixels))
 }
 
-impl std::convert::From<failure::Error> for crate::error::ViuError {
-    fn from(e: failure::Error) -> Self {
+/// Print sixel from a file.
+/// This will block the thread.
+/// If the file is a gif, this will block the
+/// thread indefinitely.
+pub fn print_sixel_from_file(filename: &str) -> ViuResult<(u32, u32)> {
+    use sixel::encoder::Encoder;
+    use sixel::optflags::EncodePolicy;
+
+    let encoder = Encoder::new()?;
+
+    encoder.set_encode_policy(EncodePolicy::Fast)?;
+    encoder.encode_file(std::path::Path::new(filename))?;
+
+
+    let mut stdout = std::io::stdout();
+    stdout.flush()?;
+    Ok((0, 0))
+}
+
+
+impl std::convert::From<sixel::status::Error> for crate::error::ViuError {
+    fn from(e: sixel::status::Error) -> Self {
         ViuError::SixelError(e)
     }
 }
@@ -95,17 +90,15 @@ pub fn get_sixel_support() -> SixelSupport {
 #[derive(PartialEq, Copy, Clone)]
 /// The extend to which the Kitty graphics protocol can be used.
 pub enum SixelSupport {
-    /// The Kitty graphics protocol is not supported.
+    /// The Sixel graphics protocol is not supported.
     None,
-    /// Kitty is running locally, data can be shared through a file.
-    Local,
-    /// Kitty is not running locally, data has to be sent through escape codes.
-    Remote,
+    /// The Sixel graphics protocol is supported.
+    Supported,
 }
 ///TODO check for sixel support on windows
 #[cfg(windows)]
-fn check_sixel_support() -> SixelSupport {
-    SixelSupport::None;
+fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
+    SixelSupport::None
 }
 
 #[cfg(unix)]
@@ -118,7 +111,8 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     let mut term_info = Termios::from_fd(file_descriptor)?;
     let old_iflag = term_info.c_iflag;
     let old_lflag = term_info.c_lflag;
-
+    //setup the terminal so that it will send the device attributes
+    //to stdin rather than writing them to the screen
     term_info.c_iflag &= !(ISTRIP);
     term_info.c_iflag &= !(INLCR);
     term_info.c_iflag &= !(ICRNL);
@@ -129,11 +123,15 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     term_info.c_lflag &= !(ICANON);
 
     tcsetattr(file_descriptor, TCSANOW, &mut term_info)?;
+
+    //Send Device Attributes
+    // see https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-CSI-_-ordered-by-the-final-character_s_
     write("/dev/tty", "\x1b[0c")?;
     let mut std_in_buffer: [u8; 256] = [0; 256];
     let size_read = stdin().read(&mut std_in_buffer)?;
     let mut found_sixel_support = false;
     for i in 0..size_read {
+        //52 is ascii for 4
         if std_in_buffer[i] == 52 {
             found_sixel_support = true;
             break;
@@ -142,26 +140,25 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     term_info.c_iflag = old_iflag;
     term_info.c_lflag = old_lflag;
     tcsetattr(file_descriptor, TCSANOW, &mut term_info)?;
-    return Ok(if found_sixel_support {
-        SixelSupport::Local
+    Ok(if found_sixel_support {
+        SixelSupport::Supported
     } else {
         SixelSupport::None
-    });
+    })
 }
 
 // // Check if Sixel protocol can be used
-#[cfg(unix)]
 fn check_sixel_support() -> SixelSupport {
-    use SixelSupport::{Local, None};
+    use SixelSupport::{None, Supported};
     match env::var("TERM").unwrap_or(String::from("None")).as_str() {
-        "mlterm" => Local,
-        "yaft-256color" => Local,
+        "mlterm" => Supported,
+        "yaft-256color" => Supported,
         "xterm-256color" => xterm_check_sixel_support().unwrap_or(None),
         _ => match env::var("TERM_PROGRAM")
             .unwrap_or(String::from("None"))
             .as_str()
         {
-            "MacTerm" => Local,
+            "MacTerm" => Supported,
             _ => None,
         },
     }
@@ -172,10 +169,9 @@ fn check_sixel_support() -> SixelSupport {
 ///sixel support
 #[test]
 #[ignore]
-fn pixel_support() {
+fn sixel_support() {
     match check_sixel_support() {
-        SixelSupport::Local => (),
+        SixelSupport::Supported => (),
         SixelSupport::None => assert!(false),
-        SixelSupport::Remote => (),
     }
 }
