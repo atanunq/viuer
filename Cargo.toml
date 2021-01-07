@@ -26,4 +26,3 @@ sixel-sys = "0.3.1"
 
 [target.'cfg(unix)'.dependencies]
 termios = "0.3.3"
-nix = "0.19.1"
