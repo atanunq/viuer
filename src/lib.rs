@@ -39,8 +39,7 @@ mod utils;
 pub use config::Config;
 pub use error::{ViuError, ViuResult};
 pub use printer::{
-    get_kitty_support, get_sixel_support, is_iterm_supported, print_sixel_from_file, resize,
-    KittySupport, SixelSupport,
+    get_kitty_support, get_sixel_support, is_iterm_supported, resize, KittySupport, SixelSupport,
 };
 pub use utils::terminal_size;
 

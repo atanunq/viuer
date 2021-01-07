@@ -13,10 +13,6 @@ impl Printer for SixelPrinter {
     fn print(&self, img: &DynamicImage, _config: &Config) -> ViuResult<(u32, u32)> {
         print_sixel(img)
     }
-
-    fn print_from_file(&self, filename: &str, _config: &Config) -> ViuResult<(u32, u32)> {
-        print_sixel_from_file(filename)
-    }
 }
 
 fn print_sixel(img: &image::DynamicImage) -> ViuResult<(u32, u32)> {
@@ -44,25 +40,54 @@ fn print_sixel(img: &image::DynamicImage) -> ViuResult<(u32, u32)> {
     let mut stdout = std::io::stdout();
     stdout.flush()?;
 
-    Ok((x_pixles, y_pixels))
+    let y_pixel_size = get_pixel_size();
+    let small_y_pixels = y_pixels as u16;
+    Ok((
+        x_pixles,
+        if y_pixel_size <= 0 {
+            5000
+        } else {
+            (small_y_pixels / y_pixel_size + 1) as u32
+        },
+    ))
 }
 
-/// Print sixel from a file.
-/// This will block the thread.
-/// If the file is a gif, this will block the
-/// thread indefinitely.
-pub fn print_sixel_from_file(filename: &str) -> ViuResult<(u32, u32)> {
-    use sixel::encoder::Encoder;
-    use sixel::optflags::EncodePolicy;
+#[cfg(windows)]
+fn get_pixel_size() -> u16 {
+    0
+}
 
-    let encoder = Encoder::new()?;
+#[cfg(unix)]
+#[derive(Debug)]
+#[repr(C)]
+struct winsize {
+    ws_row: libc::c_ushort,
+    ws_col: libc::c_ushort,
+    ws_xpixel: libc::c_ushort,
+    ws_ypixel: libc::c_ushort,
+}
 
-    encoder.set_encode_policy(EncodePolicy::Fast)?;
-    encoder.encode_file(std::path::Path::new(filename))?;
-
-    let mut stdout = std::io::stdout();
-    stdout.flush()?;
-    Ok((0, 0))
+#[cfg(unix)]
+fn get_pixel_size() -> u16 {
+    #[cfg(any(target_os = "macos", target_os = "freebsd"))]
+    const TIOCGWINSZ: libc::c_ulong = 0x40087468;
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    const TIOCGWINSZ: libc::c_ulong = 0x5413;
+    let size_out = winsize {
+        ws_row: 0,
+        ws_col: 0,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    unsafe {
+        if libc::ioctl(1, TIOCGWINSZ, &size_out) != 0 {
+            return 0;
+        }
+    }
+    if size_out.ws_ypixel <= 0 || size_out.ws_row <= 0 {
+        return 0;
+    }
+    size_out.ws_ypixel / size_out.ws_row
 }
 
 impl std::convert::From<sixel::status::Error> for crate::error::ViuError {
@@ -94,6 +119,28 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     SixelSupport::None
 }
 
+// Parsing the escape code sequence
+// see
+// http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-048.pdf
+// section 5.4.2
+// about parsing Parameter string format
+// and section
+// and   8.3.16  for the definition of CSI (spoiler alert, it's Escape [)
+// Note: In ECMA-048 docs,  05/11 is the same as 0x5B which is the hex ascii code for [
+// And see
+// https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-CSI-_-ordered-by-the-final-character_s_
+// CSI Ps c  Send Device Attributes (Primary DA).
+enum XTERMSupportParserState {
+    ExpectCSIESC,
+    ExpectCSIOpenBracket,
+    ExpectQuestionMark,
+    ParseParameter,
+    ParseParameterNotFour,
+    ParseParameterMightBeFour,
+    InvalidState,
+    FoundFour,
+}
+
 #[cfg(unix)]
 fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     use std::fs::write;
@@ -122,18 +169,73 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
     write("/dev/tty", "\x1b[0c")?;
     let mut std_in_buffer: [u8; 256] = [0; 256];
     let size_read = stdin().read(&mut std_in_buffer)?;
-    let mut found_sixel_support = false;
+    let mut state = XTERMSupportParserState::ExpectCSIESC;
     for i in 0..size_read {
-        //52 is ascii for 4
-        if std_in_buffer[i] == 52 {
-            found_sixel_support = true;
-            break;
+        let current_char = std_in_buffer[i];
+        use XTERMSupportParserState::{
+            ExpectCSIESC, ExpectCSIOpenBracket, ExpectQuestionMark, FoundFour, InvalidState,
+            ParseParameter, ParseParameterMightBeFour, ParseParameterNotFour,
+        };
+
+        match state {
+            ExpectCSIESC => {
+                //ascii for ESC
+                if current_char != 27 {
+                    state = InvalidState;
+                    break;
+                }
+                state = ExpectCSIOpenBracket;
+            }
+            ExpectCSIOpenBracket => {
+                //ascii for [
+                if current_char != 91 {
+                    state = InvalidState;
+                    break;
+                }
+                state = ExpectQuestionMark;
+            }
+            ExpectQuestionMark => {
+                //ascii for ?
+                if current_char != 63 {
+                    state = InvalidState;
+                    break;
+                }
+                state = ParseParameter;
+            }
+            //ascii for 4
+            ParseParameter => {
+                state = if current_char != 52 {
+                    ParseParameterNotFour
+                } else {
+                    ParseParameterMightBeFour
+                }
+            }
+            //ascii for ; which is the separator
+            ParseParameterNotFour => {
+                state = if current_char != 59 {
+                    ParseParameterNotFour
+                } else {
+                    ParseParameter
+                }
+            }
+            //59 is ascii for ; which is the separator and
+            // 99 is ascii for c which marks the end of the phrase
+            ParseParameterMightBeFour => {
+                if current_char == 59 || current_char == 99 {
+                    state = FoundFour;
+                    break;
+                }
+                state = ParseParameterNotFour;
+            }
+            InvalidState => break,
+            FoundFour => break,
         }
     }
     term_info.c_iflag = old_iflag;
     term_info.c_lflag = old_lflag;
     tcsetattr(file_descriptor, TCSANOW, &mut term_info)?;
-    Ok(if found_sixel_support {
+
+    Ok(if let XTERMSupportParserState::FoundFour = state {
         SixelSupport::Supported
     } else {
         SixelSupport::None
@@ -143,9 +245,12 @@ fn xterm_check_sixel_support() -> Result<SixelSupport, std::io::Error> {
 // // Check if Sixel protocol can be used
 fn check_sixel_support() -> SixelSupport {
     use SixelSupport::{None, Supported};
+
     match env::var("TERM").unwrap_or(String::from("None")).as_str() {
         "mlterm" => Supported,
         "yaft-256color" => Supported,
+        "st-256color" => xterm_check_sixel_support().unwrap_or(None),
+        "xterm" => xterm_check_sixel_support().unwrap_or(None),
         "xterm-256color" => xterm_check_sixel_support().unwrap_or(None),
         _ => match env::var("TERM_PROGRAM")
             .unwrap_or(String::from("None"))
