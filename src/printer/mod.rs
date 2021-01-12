@@ -13,9 +13,7 @@ mod kitty;
 pub use kitty::{get_kitty_support, KittyPrinter, KittySupport};
 
 mod sixel;
-pub use self::sixel::get_sixel_support;
-pub use self::sixel::SixelPrinter;
-pub use self::sixel::SixelSupport;
+pub use self::sixel::{get_sixel_support, SixelPrinter, SixelSupport};
 
 mod iterm;
 pub use iterm::iTermPrinter;

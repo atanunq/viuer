@@ -44,7 +44,7 @@ fn print_sixel(img: &image::DynamicImage) -> ViuResult<(u32, u32)> {
     let small_y_pixels = y_pixels as u16;
     Ok((
         x_pixles,
-        if y_pixel_size <= 0 {
+        if y_pixel_size == 0 {
             5000
         } else {
             (small_y_pixels / y_pixel_size + 1) as u32
@@ -84,7 +84,7 @@ fn get_pixel_size() -> u16 {
             return 0;
         }
     }
-    if size_out.ws_ypixel <= 0 || size_out.ws_row <= 0 {
+    if size_out.ws_ypixel == 0 || size_out.ws_row == 0 {
         return 0;
     }
     size_out.ws_ypixel / size_out.ws_row
@@ -100,17 +100,17 @@ lazy_static! {
     static ref SIXEL_SUPPORT: SixelSupport = check_sixel_support();
 }
 
-/// Returns the terminal's support for the Kitty graphics protocol.
+/// Returns the terminal's support for Sixel.
 pub fn get_sixel_support() -> SixelSupport {
     *SIXEL_SUPPORT
 }
 
 #[derive(PartialEq, Copy, Clone)]
-/// The extend to which the Kitty graphics protocol can be used.
+/// Whether the terminal supports Sixel.
 pub enum SixelSupport {
-    /// The Sixel graphics protocol is not supported.
+    /// Sixel is not supported.
     None,
-    /// The Sixel graphics protocol is supported.
+    /// Sixel is supported.
     Supported,
 }
 ///TODO check for sixel support on windows
@@ -259,17 +259,5 @@ fn check_sixel_support() -> SixelSupport {
             "MacTerm" => Supported,
             _ => None,
         },
-    }
-}
-
-///Ignore this test because it
-///only passes on systems with
-///sixel support
-#[test]
-#[ignore]
-fn sixel_support() {
-    match check_sixel_support() {
-        SixelSupport::Supported => (),
-        SixelSupport::None => assert!(false),
     }
 }
