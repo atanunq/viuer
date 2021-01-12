@@ -46,7 +46,12 @@ impl From<tempfile::PersistError> for ViuError {
         ViuError::Tempfile(err)
     }
 }
-// failure = "0.1.5"
+
+impl From<sixel::status::Error> for ViuError {
+    fn from(e: sixel::status::Error) -> Self {
+        ViuError::SixelError(e)
+    }
+}
 
 impl std::fmt::Display for ViuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

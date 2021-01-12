@@ -39,7 +39,7 @@ mod utils;
 pub use config::Config;
 pub use error::{ViuError, ViuResult};
 pub use printer::{
-    get_kitty_support, get_sixel_support, is_iterm_supported, resize, KittySupport, SixelSupport,
+    get_kitty_support, is_iterm_supported, is_sixel_supported, resize, KittySupport,
 };
 pub use utils::terminal_size;
 
@@ -122,7 +122,7 @@ fn choose_printer(config: &Config) -> Box<dyn Printer> {
     } else if config.use_kitty && get_kitty_support() != KittySupport::None {
         // print!("We are using the kitty printer");
         Box::new(printer::KittyPrinter {})
-    } else if config.use_sixel && get_sixel_support() != SixelSupport::None {
+    } else if config.use_sixel && is_sixel_supported() {
         // print!("We are using the sixel printer");
         Box::new(printer::SixelPrinter {})
     } else {
