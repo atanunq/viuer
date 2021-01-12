@@ -1,9 +1,11 @@
 use crate::error::ViuResult;
-use crate::printer::Printer;
+use crate::printer::{adjust_offset, Printer};
 use crate::Config;
 use console::{Key, Term};
 use image::{DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
+use sixel::encoder::{Encoder, QuickFrameBuilder};
+use sixel::optflags::EncodePolicy;
 use std::io::Write;
 
 pub struct SixelPrinter {}
@@ -18,88 +20,37 @@ pub fn is_sixel_supported() -> bool {
 }
 
 impl Printer for SixelPrinter {
-    fn print(&self, img: &DynamicImage, _config: &Config) -> ViuResult<(u32, u32)> {
-        print_sixel(img)
+    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+        let (width, height) = img.dimensions();
+
+        let rgba = img.to_rgba8();
+        let raw = rgba.as_raw();
+
+        let mut stdout = std::io::stdout();
+        adjust_offset(&mut stdout, config)?;
+
+        //TODO: get the desired width and height
+        // let (w, h) = find_best_fit(&img, config.width, config.height);
+
+        let encoder = Encoder::new()?;
+
+        encoder.set_encode_policy(EncodePolicy::Fast)?;
+
+        let frame = QuickFrameBuilder::new()
+            .width(width as usize)
+            .height(height as usize)
+            .format(sixel_sys::PixelFormat::RGBA8888)
+            .pixels(raw.to_vec());
+
+        encoder.encode_bytes(frame)?;
+
+        Ok((width, height))
     }
-}
-
-fn print_sixel(img: &image::DynamicImage) -> ViuResult<(u32, u32)> {
-    use sixel::encoder::{Encoder, QuickFrameBuilder};
-    use sixel::optflags::EncodePolicy;
-
-    let (x_pixles, y_pixels) = img.dimensions();
-
-    let rgba = img.to_rgba8();
-    let raw = rgba.as_raw();
-
-    let encoder = Encoder::new()?;
-
-    encoder.set_encode_policy(EncodePolicy::Fast)?;
-
-    let frame = QuickFrameBuilder::new()
-        .width(x_pixles as usize)
-        .height(y_pixels as usize)
-        .format(sixel_sys::PixelFormat::RGBA8888)
-        .pixels(raw.to_vec());
-
-    encoder.encode_bytes(frame)?;
-
-    // No end of line printed by encoder
-    let mut stdout = std::io::stdout();
-    stdout.flush()?;
-
-    let y_pixel_size = get_pixel_size();
-    let small_y_pixels = y_pixels as u16;
-    Ok((
-        x_pixles,
-        if y_pixel_size == 0 {
-            5000
-        } else {
-            (small_y_pixels / y_pixel_size + 1) as u32
-        },
-    ))
-}
-
-#[cfg(windows)]
-fn get_pixel_size() -> u16 {
-    0
-}
-
-#[cfg(unix)]
-#[derive(Debug)]
-#[repr(C)]
-struct winsize {
-    ws_row: libc::c_ushort,
-    ws_col: libc::c_ushort,
-    ws_xpixel: libc::c_ushort,
-    ws_ypixel: libc::c_ushort,
-}
-
-#[cfg(unix)]
-fn get_pixel_size() -> u16 {
-    #[cfg(any(target_os = "macos", target_os = "freebsd"))]
-    const TIOCGWINSZ: libc::c_ulong = 0x40087468;
-    #[cfg(any(target_os = "linux", target_os = "android"))]
-    const TIOCGWINSZ: libc::c_ulong = 0x5413;
-    let size_out = winsize {
-        ws_row: 0,
-        ws_col: 0,
-        ws_xpixel: 0,
-        ws_ypixel: 0,
-    };
-    unsafe {
-        if libc::ioctl(1, TIOCGWINSZ, &size_out) != 0 {
-            return 0;
-        }
-    }
-    if size_out.ws_ypixel == 0 || size_out.ws_row == 0 {
-        return 0;
-    }
-    size_out.ws_ypixel / size_out.ws_row
 }
 
 // Check if Sixel is within the terminal's attributes
 // see https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Sixel-Graphics
+// and https://vt100.net/docs/vt510-rm/DA1.html
 fn check_device_attrs() -> ViuResult<bool> {
     print!("\x1b[c");
     std::io::stdout().flush()?;
