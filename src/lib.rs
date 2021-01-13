@@ -123,7 +123,7 @@ fn choose_printer(config: &Config) -> Box<dyn Printer> {
         // print!("We are using the kitty printer");
         Box::new(printer::KittyPrinter {})
     } else if config.use_sixel && is_sixel_supported() {
-        print!("We are using the sixel printer");
+        //println!("We are using the sixel printer");
         Box::new(printer::SixelPrinter {})
     } else {
         // print!("We are using the block printer");

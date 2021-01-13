@@ -1,8 +1,8 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use console::{Key, Term};
-use image::{DynamicImage, GenericImageView};
+use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
 use sixel::encoder::{Encoder, QuickFrameBuilder};
 use sixel::optflags::EncodePolicy;
@@ -21,16 +21,18 @@ pub fn is_sixel_supported() -> bool {
 
 impl Printer for SixelPrinter {
     fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
-        let (width, height) = img.dimensions();
+        let (w, h) = find_best_fit(&img, config.width, config.height);
 
-        let rgba = img.to_rgba8();
+        let resized_img = img.resize_exact(6 * w, 12 * h, FilterType::Triangle);
+
+        //TODO: not working for width > 1000; off by one row issues
+        let (width, height) = resized_img.dimensions();
+
+        let rgba = resized_img.to_rgba8();
         let raw = rgba.as_raw();
 
         let mut stdout = std::io::stdout();
         adjust_offset(&mut stdout, config)?;
-
-        //TODO: get the desired width and height
-        // let (w, h) = find_best_fit(&img, config.width, config.height);
 
         let encoder = Encoder::new()?;
 
@@ -52,10 +54,11 @@ impl Printer for SixelPrinter {
 // see https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Sixel-Graphics
 // and https://vt100.net/docs/vt510-rm/DA1.html
 fn check_device_attrs() -> ViuResult<bool> {
-    print!("\x1b[c");
-    std::io::stdout().flush()?;
+    let mut term = Term::stdout();
 
-    let term = Term::stdout();
+    write!(&mut term, "\x1b[c")?;
+    term.flush()?;
+
     let mut response = String::new();
 
     while let Ok(key) = term.read_key() {
