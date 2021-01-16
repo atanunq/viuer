@@ -23,9 +23,9 @@ impl Printer for SixelPrinter {
     fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         let (w, h) = find_best_fit(&img, config.width, config.height);
 
-        let resized_img = img.resize_exact(6 * w, 12 * h, FilterType::Triangle);
+        let resized_img =
+            img.resize_exact(std::cmp::min(6 * w, 1000), 12 * h, FilterType::Triangle);
 
-        //TODO: not working for width > 1000; off by one row issues
         let (width, height) = resized_img.dimensions();
 
         let rgba = resized_img.to_rgba8();
@@ -46,7 +46,7 @@ impl Printer for SixelPrinter {
 
         encoder.encode_bytes(frame)?;
 
-        Ok((width, height))
+        Ok((w, h))
     }
 }
 
@@ -78,7 +78,9 @@ fn check_sixel_support() -> bool {
     if let Ok(term) = std::env::var("TERM") {
         match term.as_str() {
             "mlterm" | "yaft-256color" => return true,
-            "st-256color" | "xterm" | "xterm-256color" => return check_device_attrs().is_ok(),
+            "st-256color" | "xterm" | "xterm-256color" => {
+                return check_device_attrs().unwrap_or(false)
+            }
             _ => {
                 if let Ok(term_program) = std::env::var("TERM_PROGRAM") {
                     return term_program == "MacTerm";
