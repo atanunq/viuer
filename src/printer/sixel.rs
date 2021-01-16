@@ -4,8 +4,8 @@ use crate::Config;
 use console::{Key, Term};
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
-use sixel::encoder::{Encoder, QuickFrameBuilder};
-use sixel::optflags::EncodePolicy;
+use sixel_rs::encoder::{Encoder, QuickFrameBuilder};
+use sixel_rs::optflags::EncodePolicy;
 use std::io::Write;
 
 pub struct SixelPrinter {}

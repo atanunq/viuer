@@ -12,7 +12,9 @@ pub use block::BlockPrinter;
 mod kitty;
 pub use kitty::{get_kitty_support, KittyPrinter, KittySupport};
 
+#[cfg(feature = "sixel")]
 mod sixel;
+#[cfg(feature = "sixel")]
 pub use self::sixel::{is_sixel_supported, SixelPrinter};
 
 mod iterm;
