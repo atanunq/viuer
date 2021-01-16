@@ -1,4 +1,5 @@
 ## Unreleased
+- Experimental Sixel support
 
 ## 0.3.1
 - Make `ViuResult` public
