@@ -18,6 +18,9 @@ pub enum ViuError {
     KittyResponse(Vec<console::Key>),
     /// Kitty protocol not supported
     KittyNotSupported,
+    /// Error while printing with sixel
+    #[cfg(feature = "sixel")]
+    SixelError(sixel_rs::status::Error),
 }
 
 impl std::error::Error for ViuError {}
@@ -45,6 +48,13 @@ impl From<tempfile::PersistError> for ViuError {
     }
 }
 
+#[cfg(feature = "sixel")]
+impl From<sixel_rs::status::Error> for ViuError {
+    fn from(e: sixel_rs::status::Error) -> Self {
+        ViuError::SixelError(e)
+    }
+}
+
 impl std::fmt::Display for ViuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -55,6 +65,8 @@ impl std::fmt::Display for ViuError {
             ViuError::Tempfile(e) => write!(f, "Tempfile error: {}", e),
             ViuError::KittyResponse(keys) => write!(f, "Kitty response: {:?}", keys),
             ViuError::KittyNotSupported => write!(f, "Kitty graphics protocol not supported"),
+            #[cfg(feature = "sixel")]
+            ViuError::SixelError(e) => write!(f, "Sixel error: {:?}", e),
         }
     }
 }

@@ -12,6 +12,7 @@ being displayed in specific environments:
 
 - [Kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
 - [iTerm](https://iterm2.com/documentation-images.html)
+- [Sixel](https://github.com/saitoha/libsixel) (behind the "sixel" feature gate)
 
 For a demo of the library's usage and example screenshots, see [`viu`](https://github.com/atanunq/viu).
 
