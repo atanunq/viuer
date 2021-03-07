@@ -155,6 +155,12 @@ fn adjust_offset(stdout: &mut impl Write, config: &Config) -> ViuResult {
 mod tests {
     use super::*;
 
+    fn test_adjust_offset_output(config: &Config, str: &str) {
+        let mut vec = Vec::new();
+        adjust_offset(&mut vec, &config).unwrap();
+        assert_eq!(std::str::from_utf8(&vec).unwrap(), str);
+    }
+
     fn best_fit_large_test_image() -> DynamicImage {
         DynamicImage::ImageRgba8(image::RgbaImage::new(600, 500))
     }
@@ -340,5 +346,51 @@ mod tests {
     #[test]
     fn test_fit_equal_to_bounds() {
         assert_eq!((80, 12), fit_dimensions(80, 24, 80, 24));
+    }
+
+    #[test]
+    fn test_adjust_offset_absolute() {
+        let mut config = Config {
+            absolute_offset: true,
+            x: 3,
+            y: 4,
+            ..Default::default()
+        };
+
+        config.x = 3;
+        config.y = 0;
+        test_adjust_offset_output(&config, "\x1b[1;4H");
+
+        config.x = 7;
+        config.y = 4;
+        test_adjust_offset_output(&config, "\x1b[5;8H");
+    }
+
+    #[test]
+    fn test_adjust_offset_not_absolute() {
+        let mut config = Config {
+            absolute_offset: false,
+            x: 3,
+            y: 4,
+            ..Default::default()
+        };
+        test_adjust_offset_output(&config, "\n\n\n\n\x1b[3C");
+
+        config.x = 1;
+        config.y = -2;
+        test_adjust_offset_output(&config, "\x1b[2F\x1b[1C");
+    }
+
+    #[test]
+    fn test_invalid_adjust_offset() {
+        let config = Config {
+            absolute_offset: true,
+            y: -1,
+            ..Default::default()
+        };
+
+        let mut vec = Vec::new();
+        let err = adjust_offset(&mut vec, &config).unwrap_err();
+        assert!(matches!(err, ViuError::InvalidConfiguration { .. }));
     }
 }

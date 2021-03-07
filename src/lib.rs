@@ -29,7 +29,6 @@
 use crossterm::execute;
 use image::DynamicImage;
 use printer::Printer;
-use std::io::Write;
 
 mod config;
 mod error;
