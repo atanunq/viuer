@@ -24,12 +24,63 @@ pub use iterm::is_iterm_supported;
 pub trait Printer {
     // Print the given image in the terminal while respecting the options in the config struct.
     // Return the dimensions of the printed image in **terminal cells**.
-    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)>;
-    fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(
+        &self,
+        stdout: &mut impl Write,
+        img: &DynamicImage,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)>;
+    fn print_from_file(
+        &self,
+        stdout: &mut impl Write,
+        filename: &str,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
         let img = image::io::Reader::open(filename)?
             .with_guessed_format()?
             .decode()?;
-        self.print(&img, config)
+        self.print(stdout, &img, config)
+    }
+}
+
+#[allow(non_camel_case_types)]
+pub enum PrinterType {
+    Block,
+    Kitty,
+    iTerm,
+    #[cfg(feature = "sixel")]
+    Sixel,
+}
+
+impl Printer for PrinterType {
+    fn print(
+        &self,
+        stdout: &mut impl Write,
+        img: &DynamicImage,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
+        match self {
+            PrinterType::Block => BlockPrinter.print(stdout, img, config),
+            PrinterType::Kitty => KittyPrinter.print(stdout, img, config),
+            PrinterType::iTerm => iTermPrinter.print(stdout, img, config),
+            #[cfg(feature = "sixel")]
+            PrinterType::Sixel => SixelPrinter.print(stdout, img, config),
+        }
+    }
+
+    fn print_from_file(
+        &self,
+        stdout: &mut impl Write,
+        filename: &str,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
+        match self {
+            PrinterType::Block => BlockPrinter.print_from_file(stdout, filename, config),
+            PrinterType::Kitty => KittyPrinter.print_from_file(stdout, filename, config),
+            PrinterType::iTerm => iTermPrinter.print_from_file(stdout, filename, config),
+            #[cfg(feature = "sixel")]
+            PrinterType::Sixel => SixelPrinter.print_from_file(stdout, filename, config),
+        }
     }
 }
 

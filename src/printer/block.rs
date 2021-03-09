@@ -16,10 +16,15 @@ const LOWER_HALF_BLOCK: &str = "\u{2584}";
 const CHECKERBOARD_BACKGROUND_LIGHT: (u8, u8, u8) = (153, 153, 153);
 const CHECKERBOARD_BACKGROUND_DARK: (u8, u8, u8) = (102, 102, 102);
 
-pub struct BlockPrinter {}
+pub struct BlockPrinter;
 
 impl Printer for BlockPrinter {
-    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(
+        &self,
+        stdout: &mut impl Write,
+        img: &DynamicImage,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
         // there are two types of buffers in this function:
         // - stdout: Buffer, which is from termcolor crate. Used to buffer all writing
         //   required to print a single image or frame. Flushed on every line
@@ -276,7 +281,8 @@ mod tests {
             transparent: true,
             ..Default::default()
         };
-        let (w, h) = BlockPrinter {}.print(&img, &config).unwrap();
+        let mut vec = Vec::new();
+        let (w, h) = BlockPrinter {}.print(&mut vec, &img, &config).unwrap();
 
         assert_eq!(w, 20);
         assert_eq!(h, 3);
@@ -294,7 +300,8 @@ mod tests {
             transparent: true,
             ..Default::default()
         };
-        let (w, h) = BlockPrinter {}.print(&img, &config).unwrap();
+        let mut vec = Vec::new();
+        let (w, h) = BlockPrinter {}.print(&mut vec, &img, &config).unwrap();
 
         assert_eq!(w, 160);
         assert_eq!(h, 40);

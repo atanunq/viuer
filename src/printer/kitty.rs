@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use std::io::Write;
 use std::io::{Error, ErrorKind};
 
-pub struct KittyPrinter {}
+pub struct KittyPrinter;
 
 lazy_static! {
     static ref KITTY_SUPPORT: KittySupport = check_kitty_support();
@@ -19,7 +19,12 @@ pub fn get_kitty_support() -> KittySupport {
 }
 
 impl Printer for KittyPrinter {
-    fn print(&self, img: &image::DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(
+        &self,
+        stdout: &mut impl Write,
+        img: &image::DynamicImage,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
         match get_kitty_support() {
             KittySupport::None => Err(ViuError::KittyNotSupported),
             KittySupport::Local => {

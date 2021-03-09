@@ -6,7 +6,7 @@ use lazy_static::lazy_static;
 use std::io::{BufReader, Read, Write};
 
 #[allow(non_camel_case_types)]
-pub struct iTermPrinter {}
+pub struct iTermPrinter;
 
 lazy_static! {
     static ref ITERM_SUPPORT: bool = check_iterm_support();
@@ -18,7 +18,12 @@ pub fn is_iterm_supported() -> bool {
 }
 
 impl Printer for iTermPrinter {
-    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(
+        &self,
+        stdout: &mut impl Write,
+        img: &DynamicImage,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
         let (width, height) = img.dimensions();
 
         // Transform the dynamic image to a PNG which can be given directly to iTerm
@@ -33,7 +38,12 @@ impl Printer for iTermPrinter {
         print_buffer(img, &png_bytes[..], config)
     }
 
-    fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print_from_file(
+        &self,
+        stdout: &mut impl Write,
+        filename: &str,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
         let file = std::fs::File::open(filename)?;
 
         // load the file content

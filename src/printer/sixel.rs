@@ -8,7 +8,7 @@ use sixel_rs::encoder::{Encoder, QuickFrameBuilder};
 use sixel_rs::optflags::EncodePolicy;
 use std::io::Write;
 
-pub struct SixelPrinter {}
+pub struct SixelPrinter;
 
 lazy_static! {
     static ref SIXEL_SUPPORT: bool = check_sixel_support();
@@ -20,7 +20,12 @@ pub fn is_sixel_supported() -> bool {
 }
 
 impl Printer for SixelPrinter {
-    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(
+        &self,
+        stdout: &mut impl Write,
+        img: &DynamicImage,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
         let (w, h) = find_best_fit(&img, config.width, config.height);
 
         //TODO: the max 1000 width is an xterm bug workaround, other terminals may not be affected
@@ -32,8 +37,7 @@ impl Printer for SixelPrinter {
         let rgba = resized_img.to_rgba8();
         let raw = rgba.as_raw();
 
-        let mut stdout = std::io::stdout();
-        adjust_offset(&mut stdout, config)?;
+        adjust_offset(stdout, config)?;
 
         let encoder = Encoder::new()?;
 
