@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
+        os: [windows-latest, macOS-latest]
     steps:
     - uses: hecrj/setup-rust-action@v1
       with:
@@ -20,26 +20,26 @@ jobs:
     - uses: actions/checkout@master
     - name: Format
       run: cargo fmt --all -- --check
-    - name: Build
-      run: cargo build --all-features --verbose
-    - name: Lint
-      run: cargo clippy --all-features -- -D warnings
-    - name: Run tests
-      run: cargo test --all-features --verbose
-
-  build-windows:
-    runs-on: "windows-latest"
-    steps:
-    - uses: hecrj/setup-rust-action@v1
-      with:
-        rust-version: stable
-        components: clippy, rustfmt
-    - uses: actions/checkout@master
-    - name: Format
-      run: cargo fmt --all -- --check
-    - name: Build
-      run: cargo build --verbose
     - name: Lint
       run: cargo clippy -- -D warnings
+    - name: Build
+      run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+
+  build-ubuntu:
+    runs-on: "ubuntu-latest"
+    steps:
+    - uses: hecrj/setup-rust-action@v1
+      with:
+        rust-version: stable
+        components: clippy, rustfmt
+    - uses: actions/checkout@master
+    - name: Format
+      run: cargo fmt --all -- --check
+    - name: Lint
+      run: cargo clippy --all-features -- -D warnings
+    - name: Build
+      run: cargo build --all-features --verbose
+    - name: Run tests
+      run: cargo test --all-features --verbose
