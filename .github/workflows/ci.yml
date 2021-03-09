@@ -20,10 +20,10 @@ jobs:
     - uses: actions/checkout@master
     - name: Format
       run: cargo fmt --all -- --check
-    - name: Lint
-      run: cargo clippy --all-features -- -D warnings
     - name: Build
       run: cargo build --all-features --verbose
+    - name: Lint
+      run: cargo clippy --all-features -- -D warnings
     - name: Run tests
       run: cargo test --all-features --verbose
 
@@ -37,9 +37,9 @@ jobs:
     - uses: actions/checkout@master
     - name: Format
       run: cargo fmt --all -- --check
-    - name: Lint
-      run: cargo clippy -- -D warnings
     - name: Build
       run: cargo build --verbose
+    - name: Lint
+      run: cargo clippy -- -D warnings
     - name: Run tests
       run: cargo test --verbose
