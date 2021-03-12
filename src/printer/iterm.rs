@@ -35,7 +35,7 @@ impl Printer for iTermPrinter {
             img.color(),
         )?;
 
-        print_buffer(img, &png_bytes[..], config)
+        print_buffer(stdout, img, &png_bytes[..], config)
     }
 
     fn print_from_file(
@@ -52,16 +52,19 @@ impl Printer for iTermPrinter {
         buf_reader.read_to_end(&mut file_content)?;
 
         let img = image::load_from_memory(&file_content[..])?;
-        print_buffer(&img, &file_content[..], config)
+        print_buffer(stdout, &img, &file_content[..], config)
     }
 }
 
 // This function requires both a DynamicImage, which is used to calculate dimensions,
 // and it's raw representation as a file, because that's the data iTerm needs to display it.
-fn print_buffer(img: &DynamicImage, img_content: &[u8], config: &Config) -> ViuResult<(u32, u32)> {
-    let mut stdout = std::io::stdout();
-
-    adjust_offset(&mut stdout, config)?;
+fn print_buffer(
+    stdout: &mut impl Write,
+    img: &DynamicImage,
+    img_content: &[u8],
+    config: &Config,
+) -> ViuResult<(u32, u32)> {
+    adjust_offset(stdout, config)?;
 
     let (w, h) = find_best_fit(&img, config.width, config.height);
 
@@ -86,4 +89,26 @@ fn check_iterm_support() -> bool {
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::GenericImage;
+
+    #[test]
+    fn test_print_e2e() {
+        let mut img = DynamicImage::ImageRgba8(image::RgbaImage::new(2, 3));
+        img.put_pixel(1, 2, image::Rgba([2, 4, 6, 8]));
+
+        let config = Config {
+            x: 4,
+            y: 3,
+            ..Default::default()
+        };
+        let mut vec = Vec::new();
+
+        assert_eq!(iTermPrinter.print(&mut vec, &img, &config).unwrap(), (2, 1));
+        assert_eq!(std::str::from_utf8(&vec).unwrap(), "\x1b[4;5H\x1b]1337;File=inline=1;preserveAspectRatio=1;size=74;width=2;height=1:iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAAEUlEQVR4nGNkgAJUBhMLGwcAAHkAGFlFRLoAAAAASUVORK5CYII=\x07\n");
+    }
 }
