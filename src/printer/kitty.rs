@@ -219,7 +219,7 @@ mod tests {
         };
 
         let mut vec = Vec::new();
-        print_local(&mut vec, &img, &config).unwrap();
+        assert_eq!(print_local(&mut vec, &img, &config).unwrap(), (40, 12));
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=12,a=T,t=t;"));
@@ -238,7 +238,7 @@ mod tests {
         };
 
         let mut vec = Vec::new();
-        print_remote(&mut vec, &img, &config).unwrap();
+        assert_eq!(print_remote(&mut vec, &img, &config).unwrap(), (1, 1));
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert_eq!(
