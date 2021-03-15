@@ -183,57 +183,57 @@ mod tests {
     use termcolor::{Ansi, Color};
 
     #[test]
-    fn test_block_printer_small() {
-        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(20, 7));
+    fn test_block_printer_e2e() {
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(5, 4));
+        let mut buf = Ansi::new(vec![]);
 
-        let config = Config {
-            width: Some(40),
-            height: None,
-            absolute_offset: false,
-            transparent: true,
-            ..Default::default()
-        };
-        let mut vec = Vec::new();
-        let (w, h) = BlockPrinter {}.print(&mut vec, &img, &config).unwrap();
+        let config = Config::default();
 
-        assert_eq!(w, 20);
-        assert_eq!(h, 4);
+        let (w, h) = print_to_writecolor(&mut buf, &img, &config).unwrap();
+        assert_eq!((w, h), (5, 2));
+
+        assert_eq!(
+            std::str::from_utf8(buf.get_ref()).unwrap(),
+            "\x1b[1;1H\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\n\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\n"
+        );
     }
 
     #[test]
-    fn test_block_printer_large() {
-        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(2000, 999));
+    fn test_block_printer_e2e_transparent() {
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(5, 4));
+        let mut buf = Ansi::new(vec![]);
 
         let config = Config {
-            width: Some(160),
-            height: None,
-            absolute_offset: false,
             transparent: true,
             ..Default::default()
         };
-        let mut vec = Vec::new();
-        let (w, h) = BlockPrinter {}.print(&mut vec, &img, &config).unwrap();
 
-        assert_eq!(w, 160);
-        assert_eq!(h, 39);
+        let (w, h) = print_to_writecolor(&mut buf, &img, &config).unwrap();
+        assert_eq!((w, h), (5, 2));
+
+        assert_eq!(
+            std::str::from_utf8(buf.get_ref()).unwrap(),
+            "\x1b[1;1H\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[0m\n\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[0m\n"
+        );
     }
 
     #[test]
-    fn test_block_printer_tall() {
-        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(799, 3001));
+    fn test_block_printer_e2e_odd_height() {
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(4, 3));
+        let mut buf = Ansi::new(vec![]);
 
         let config = Config {
-            width: Some(80),
-            height: None,
+            width: Some(20),
             absolute_offset: false,
-            transparent: true,
             ..Default::default()
         };
-        let mut vec = Vec::new();
-        let (w, h) = BlockPrinter {}.print(&mut vec, &img, &config).unwrap();
+        let (w, h) = print_to_writecolor(&mut buf, &img, &config).unwrap();
+        assert_eq!((w, h), (4, 2));
 
-        assert_eq!(w, 80);
-        assert_eq!(h, 150);
+        assert_eq!(
+            std::str::from_utf8(buf.get_ref()).unwrap(),
+            "\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\n\x1b[0m\x1b[38;2;102;102;102m▀\x1b[0m\x1b[38;2;153;153;153m▀\x1b[0m\x1b[38;2;102;102;102m▀\x1b[0m\x1b[38;2;153;153;153m▀\x1b[0m\n"
+        );
     }
 
     #[test]
