@@ -59,6 +59,7 @@ impl Printer for BlockPrinter {
 
         // resize the image so that it fits in the constraints, if any
         let resized_img;
+
         let img = if config.resize {
             resized_img = super::resize(&img, config.width, config.height);
             &resized_img
@@ -72,7 +73,7 @@ impl Printer for BlockPrinter {
 
         for (curr_row, img_row) in img_buffer.enumerate_rows() {
             let is_even_row = curr_row % 2 == 0;
-            let is_last_row = curr_row == height;
+            let is_last_row = curr_row == height - 1;
 
             // move right if x offset is specified
             if config.x > 0 {
@@ -92,22 +93,29 @@ impl Printer for BlockPrinter {
                 };
 
                 // Even rows modify the background, odd rows the foreground
+                // because lower half blocks are used by default
                 let colorspec = &mut row_color_buffer[pixel.0 as usize];
                 if is_even_row {
                     colorspec.set_bg(color);
+                    if is_last_row {
+                        write_colored_character(&mut stream, colorspec, true)?;
+                    }
                 } else {
                     colorspec.set_fg(color);
-                    write_colored_character(&mut stream, colorspec, is_last_row)?;
+                    write_colored_character(&mut stream, colorspec, false)?;
                 }
             }
 
-            if !is_even_row {
+            if !is_even_row && !is_last_row {
                 stream.reset()?;
                 writeln!(&mut stream)?;
             }
         }
 
-        // TODO: might be +1/2 ?
+        stream.reset()?;
+        writeln!(&mut stream)?;
+        stream.flush()?;
+
         Ok((width, height / 2))
     }
 }
