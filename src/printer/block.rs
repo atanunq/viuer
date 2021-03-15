@@ -1,5 +1,5 @@
-use crate::error::{ViuError, ViuResult};
-use crate::printer::Printer;
+use crate::error::ViuResult;
+use crate::printer::{adjust_offset, Printer};
 use crate::Config;
 
 use ansi_colours::ansi256_from_rgb;
@@ -7,7 +7,7 @@ use image::{DynamicImage, GenericImageView, Rgba};
 use std::io::Write;
 use termcolor::{BufferedStandardStream, Color, ColorChoice, ColorSpec, WriteColor};
 
-use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
+use crossterm::cursor::MoveRight;
 use crossterm::execute;
 
 const UPPER_HALF_BLOCK: &str = "\u{2580}";
@@ -26,36 +26,10 @@ impl Printer for BlockPrinter {
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
-        // there are two types of buffers in this function:
-        // - stdout: Buffer, which is from termcolor crate. Used to buffer all writing
-        //   required to print a single image or frame. Flushed on every line
-        // - row_buffer: Vec<ColorSpec>, which stores back- and foreground colors for a
-        //   row of terminal cells. When flushed, its output goes into out_buffer.
-        // They are both flushed on every terminal line (i.e 2 pixel rows)
         let mut stream = BufferedStandardStream::stdout(ColorChoice::Always);
 
-        // adjust y offset
-        if config.absolute_offset {
-            if config.y >= 0 {
-                // If absolute_offset, move to (0,y).
-                execute!(stream, MoveTo(0, config.y as u16))?;
-            } else {
-                //Negative values do not make sense.
-                return Err(ViuError::InvalidConfiguration(
-                    "absolute_offset is true but y offset is negative".to_owned(),
-                ));
-            }
-        } else if config.y < 0 {
-            // MoveUp if negative
-            execute!(stream, MoveToPreviousLine(-config.y as u16))?;
-        } else {
-            // Move down y lines
-            for _ in 0..config.y {
-                // writeln! is used instead of MoveDown to force scrolldown
-                // observed when config.y > 0 and cursor is on the last terminal line
-                writeln!(stream)?;
-            }
-        }
+        // adjust with x=0 and handle horizontal offset entirely below
+        adjust_offset(&mut stream, &Config { x: 0, ..*config })?;
 
         // resize the image so that it fits in the constraints, if any
         let resized_img;
@@ -76,7 +50,7 @@ impl Printer for BlockPrinter {
             let is_last_row = curr_row == height - 1;
 
             // move right if x offset is specified
-            if config.x > 0 {
+            if config.x > 0 && (!is_even_row || is_last_row) {
                 execute!(stream, MoveRight(config.x))?;
             }
 
