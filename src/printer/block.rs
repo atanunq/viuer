@@ -182,19 +182,24 @@ mod tests {
     use super::*;
     use termcolor::{Ansi, Color};
 
+    // Note: truecolor is not supported in CI. Hence, it should be disabled when writing the tests
+
     #[test]
     fn test_block_printer_e2e() {
         let img = DynamicImage::ImageRgba8(image::RgbaImage::new(5, 4));
         let mut buf = Ansi::new(vec![]);
 
-        let config = Config::default();
+        let config = Config {
+            truecolor: false,
+            ..Default::default()
+        };
 
         let (w, h) = print_to_writecolor(&mut buf, &img, &config).unwrap();
         assert_eq!((w, h), (5, 2));
 
         assert_eq!(
             std::str::from_utf8(buf.get_ref()).unwrap(),
-            "\x1b[1;1H\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\n\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\n"
+            "\x1b[1;1H\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\n\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\n"
         );
     }
 
@@ -223,7 +228,7 @@ mod tests {
         let mut buf = Ansi::new(vec![]);
 
         let config = Config {
-            width: Some(20),
+            truecolor: false,
             absolute_offset: false,
             ..Default::default()
         };
@@ -232,7 +237,7 @@ mod tests {
 
         assert_eq!(
             std::str::from_utf8(buf.get_ref()).unwrap(),
-            "\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\x1b[38;2;153;153;153m\x1b[48;2;102;102;102m▄\x1b[0m\x1b[38;2;102;102;102m\x1b[48;2;153;153;153m▄\x1b[0m\n\x1b[0m\x1b[38;2;102;102;102m▀\x1b[0m\x1b[38;2;153;153;153m▀\x1b[0m\x1b[38;2;102;102;102m▀\x1b[0m\x1b[38;2;153;153;153m▀\x1b[0m\n"
+            "\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\n\x1b[0m\x1b[38;5;241m▀\x1b[0m\x1b[38;5;247m▀\x1b[0m\x1b[38;5;241m▀\x1b[0m\x1b[38;5;247m▀\x1b[0m\n"
         );
     }
 
@@ -308,12 +313,14 @@ mod tests {
         let mut buf = Ansi::new(vec![]);
         let mut c = ColorSpec::new();
 
+        // test with no color
         write_colored_character(&mut buf, &c, true).unwrap();
         assert_eq!(std::str::from_utf8(buf.get_ref()).unwrap(), "\x1b[1C");
 
         c.set_fg(Some(Color::Rgb(10, 20, 30)));
-        let mut buf = Ansi::new(vec![]);
 
+        // test with fg (unusual case)
+        let mut buf = Ansi::new(vec![]);
         write_colored_character(&mut buf, &c, true).unwrap();
         assert_eq!(std::str::from_utf8(buf.get_ref()).unwrap(), "\x1b[1C");
     }
