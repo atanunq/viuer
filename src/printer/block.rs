@@ -165,10 +165,9 @@ fn write_colored_character(
     Ok(())
 }
 
+#[inline]
 fn is_pixel_transparent(pixel: (u32, u32, &Rgba<u8>)) -> bool {
-    //TODO: pixel.2[3] ?
-    let (_x, _y, data) = pixel;
-    data[3] == 0
+    pixel.2[3] == 0
 }
 
 fn get_transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
