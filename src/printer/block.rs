@@ -32,14 +32,7 @@ impl Printer for BlockPrinter {
         adjust_offset(&mut stream, &Config { x: 0, ..*config })?;
 
         // resize the image so that it fits in the constraints, if any
-        let resized_img;
-
-        let img = if config.resize {
-            resized_img = super::resize(&img, config.width, config.height);
-            &resized_img
-        } else {
-            img
-        };
+        let img = super::resize(&img, config.width, config.height);
         let (width, height) = img.dimensions();
 
         let mut row_color_buffer: Vec<ColorSpec> = vec![ColorSpec::new(); width as usize];
