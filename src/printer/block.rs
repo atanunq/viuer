@@ -103,6 +103,7 @@ fn write_colored_character(
     let out_char;
     let mut new_color;
 
+    // On the last row use upper blocks and leave the bottom half empty (transparent)
     if is_last_row {
         new_color = ColorSpec::new();
         if let Some(bg) = c.bg() {
@@ -182,7 +183,7 @@ mod tests {
 
     #[test]
     fn test_block_printer_small() {
-        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(20, 6));
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(20, 7));
 
         let config = Config {
             width: Some(40),
@@ -195,12 +196,12 @@ mod tests {
         let (w, h) = BlockPrinter {}.print(&mut vec, &img, &config).unwrap();
 
         assert_eq!(w, 20);
-        assert_eq!(h, 3);
+        assert_eq!(h, 4);
     }
 
     #[test]
     fn test_block_printer_large() {
-        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(2000, 1000));
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(2000, 999));
 
         let config = Config {
             width: Some(160),
@@ -213,6 +214,24 @@ mod tests {
         let (w, h) = BlockPrinter {}.print(&mut vec, &img, &config).unwrap();
 
         assert_eq!(w, 160);
-        assert_eq!(h, 40);
+        assert_eq!(h, 39);
+    }
+
+    #[test]
+    fn test_block_printer_tall() {
+        let img = DynamicImage::ImageRgba8(image::RgbaImage::new(799, 3001));
+
+        let config = Config {
+            width: Some(80),
+            height: None,
+            absolute_offset: false,
+            transparent: true,
+            ..Default::default()
+        };
+        let mut vec = Vec::new();
+        let (w, h) = BlockPrinter {}.print(&mut vec, &img, &config).unwrap();
+
+        assert_eq!(w, 80);
+        assert_eq!(h, 150);
     }
 }

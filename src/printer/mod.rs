@@ -172,7 +172,7 @@ fn fit_dimensions(width: u32, height: u32, bound_width: u32, bound_height: u32) 
     };
 
     if use_width {
-        (bound_width, std::cmp::max(1, intermediate / 2 + height % 2))
+        (bound_width, std::cmp::max(1, intermediate / 2))
     } else {
         (intermediate, std::cmp::max(1, bound_height / 2))
     }
@@ -218,7 +218,7 @@ mod tests {
     }
 
     fn best_fit_large_test_image() -> DynamicImage {
-        DynamicImage::ImageRgba8(image::RgbaImage::new(600, 500))
+        DynamicImage::ImageRgba8(image::RgbaImage::new(600, 499))
     }
 
     fn best_fit_small_test_image() -> DynamicImage {
@@ -259,7 +259,7 @@ mod tests {
         let img = resize_get_large_test_image();
         let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 100);
-        assert_eq!(new_img.height(), 79);
+        assert_eq!(new_img.height(), 77);
 
         let img = resize_get_small_test_image();
         let new_img = resize(&img, width, height);
@@ -341,7 +341,7 @@ mod tests {
         let width = Some(6);
         let (w, h) = find_best_fit(&img, width, height);
         assert_eq!(w, 6);
-        assert_eq!(h, 2);
+        assert_eq!(h, 1);
 
         let width = Some(3);
         let (w, h) = find_best_fit(&img, width, height);
