@@ -1,5 +1,9 @@
 ## Unreleased
 - Experimental Sixel support
+- Remove `resize` Config option
+- Change `Printer` trait function signatures
+- Improve test suite
+- Major refactor of `BlockPrinter`
 
 ## 0.3.1
 - Make `ViuResult` public
