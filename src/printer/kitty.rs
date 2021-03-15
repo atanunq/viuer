@@ -227,7 +227,7 @@ mod tests {
     }
 
     #[test]
-    fn test_print_rempte() {
+    fn test_print_remote() {
         let mut img = DynamicImage::ImageRgba8(image::RgbaImage::new(1, 2));
         img.put_pixel(0, 1, image::Rgba([2, 4, 6, 8]));
 

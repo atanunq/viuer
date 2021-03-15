@@ -27,64 +27,71 @@ impl Printer for BlockPrinter {
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         let mut stream = BufferedStandardStream::stdout(ColorChoice::Always);
+        print_to_writecolor(&mut stream, img, config)
+    }
+}
 
-        // adjust with x=0 and handle horizontal offset entirely below
-        adjust_offset(&mut stream, &Config { x: 0, ..*config })?;
+fn print_to_writecolor(
+    stdout: &mut impl WriteColor,
+    img: &DynamicImage,
+    config: &Config,
+) -> ViuResult<(u32, u32)> {
+    // adjust with x=0 and handle horizontal offset entirely below
+    adjust_offset(stdout, &Config { x: 0, ..*config })?;
 
-        // resize the image so that it fits in the constraints, if any
-        let img = super::resize(&img, config.width, config.height);
-        let (width, height) = img.dimensions();
+    // resize the image so that it fits in the constraints, if any
+    let img = super::resize(&img, config.width, config.height);
+    let (width, height) = img.dimensions();
 
-        let mut row_color_buffer: Vec<ColorSpec> = vec![ColorSpec::new(); width as usize];
-        let img_buffer = img.to_rgba8(); //TODO: Can conversion be avoided?
+    let mut row_color_buffer: Vec<ColorSpec> = vec![ColorSpec::new(); width as usize];
+    let img_buffer = img.to_rgba8(); //TODO: Can conversion be avoided?
 
-        for (curr_row, img_row) in img_buffer.enumerate_rows() {
-            let is_even_row = curr_row % 2 == 0;
-            let is_last_row = curr_row == height - 1;
+    for (curr_row, img_row) in img_buffer.enumerate_rows() {
+        let is_even_row = curr_row % 2 == 0;
+        let is_last_row = curr_row == height - 1;
 
-            // move right if x offset is specified
-            if config.x > 0 && (!is_even_row || is_last_row) {
-                execute!(stream, MoveRight(config.x))?;
-            }
+        // move right if x offset is specified
+        if config.x > 0 && (!is_even_row || is_last_row) {
+            execute!(stdout, MoveRight(config.x))?;
+        }
 
-            for pixel in img_row {
-                // choose the half block's color
-                let color = if is_pixel_transparent(pixel) {
-                    if config.transparent {
-                        None
-                    } else {
-                        Some(get_transparency_color(curr_row, pixel.0, config.truecolor))
-                    }
+        for pixel in img_row {
+            // choose the half block's color
+            let color = if is_pixel_transparent(pixel) {
+                if config.transparent {
+                    None
                 } else {
-                    Some(get_color_from_pixel(pixel, config.truecolor))
-                };
-
-                // Even rows modify the background, odd rows the foreground
-                // because lower half blocks are used by default
-                let colorspec = &mut row_color_buffer[pixel.0 as usize];
-                if is_even_row {
-                    colorspec.set_bg(color);
-                    if is_last_row {
-                        write_colored_character(&mut stream, colorspec, true)?;
-                    }
-                } else {
-                    colorspec.set_fg(color);
-                    write_colored_character(&mut stream, colorspec, false)?;
+                    Some(get_transparency_color(curr_row, pixel.0, config.truecolor))
                 }
-            }
+            } else {
+                Some(get_color_from_pixel(pixel, config.truecolor))
+            };
 
-            if !is_even_row && !is_last_row {
-                stream.reset()?;
-                writeln!(&mut stream)?;
+            // Even rows modify the background, odd rows the foreground
+            // because lower half blocks are used by default
+            let colorspec = &mut row_color_buffer[pixel.0 as usize];
+            if is_even_row {
+                colorspec.set_bg(color);
+                if is_last_row {
+                    write_colored_character(stdout, colorspec, true)?;
+                }
+            } else {
+                colorspec.set_fg(color);
+                write_colored_character(stdout, colorspec, false)?;
             }
         }
 
-        stream.reset()?;
-        writeln!(&mut stream)?;
-        stream.flush()?;
-
-        Ok((width, height / 2 + height % 2))
+        if !is_even_row && !is_last_row {
+            stdout.reset()?;
+            writeln!(stdout)?;
+        }
     }
+
+    stdout.reset()?;
+    writeln!(stdout)?;
+    stdout.flush()?;
+
+    Ok((width, height / 2 + height % 2))
 }
 
 fn write_colored_character(
@@ -173,6 +180,7 @@ fn get_color_from_pixel(pixel: (u32, u32, &Rgba<u8>), truecolor: bool) -> Color 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use termcolor::{Ansi, Color};
 
     #[test]
     fn test_block_printer_small() {
@@ -226,5 +234,87 @@ mod tests {
 
         assert_eq!(w, 80);
         assert_eq!(h, 150);
+    }
+
+    #[test]
+    fn test_write_colored_char_only_fg() {
+        let mut buf = Ansi::new(vec![]);
+        let mut c = ColorSpec::new();
+
+        c.set_fg(Some(Color::Rgb(10, 20, 30)));
+
+        write_colored_character(&mut buf, &c, false).unwrap();
+        assert_eq!(
+            std::str::from_utf8(buf.get_ref()).unwrap(),
+            "\x1b[0m\x1b[38;2;10;20;30m▄"
+        );
+    }
+
+    #[test]
+    fn test_write_colored_char_only_bg() {
+        let mut buf = Ansi::new(vec![]);
+        let mut c = ColorSpec::new();
+
+        c.set_bg(Some(Color::Rgb(50, 60, 70)));
+
+        write_colored_character(&mut buf, &c, false).unwrap();
+        assert_eq!(
+            std::str::from_utf8(buf.get_ref()).unwrap(),
+            "\x1b[0m\x1b[38;2;50;60;70m▀"
+        );
+    }
+
+    #[test]
+    fn test_write_colored_char_fg_and_bg() {
+        let mut buf = Ansi::new(vec![]);
+        let mut c = ColorSpec::new();
+
+        c.set_fg(Some(Color::Rgb(10, 20, 30)));
+        c.set_bg(Some(Color::Rgb(15, 25, 35)));
+
+        write_colored_character(&mut buf, &c, false).unwrap();
+        assert_eq!(
+            std::str::from_utf8(buf.get_ref()).unwrap(),
+            "\x1b[0m\x1b[38;2;10;20;30m\x1b[48;2;15;25;35m▄"
+        );
+    }
+
+    #[test]
+    fn test_write_colored_char_no_color() {
+        let mut buf = Ansi::new(vec![]);
+        let c = ColorSpec::new();
+
+        write_colored_character(&mut buf, &c, false).unwrap();
+        // expect to print nothing, just move cursor to the right
+        assert_eq!(std::str::from_utf8(buf.get_ref()).unwrap(), "\x1b[1C");
+    }
+
+    #[test]
+    fn test_write_colored_char_last_row_bg() {
+        let mut buf = Ansi::new(vec![]);
+        let mut c = ColorSpec::new();
+
+        c.set_bg(Some(Color::Rgb(10, 20, 30)));
+
+        write_colored_character(&mut buf, &c, true).unwrap();
+        assert_eq!(
+            std::str::from_utf8(buf.get_ref()).unwrap(),
+            "\x1b[0m\x1b[38;2;10;20;30m▀"
+        );
+    }
+
+    #[test]
+    fn test_write_colored_char_last_row_no_bg() {
+        let mut buf = Ansi::new(vec![]);
+        let mut c = ColorSpec::new();
+
+        write_colored_character(&mut buf, &c, true).unwrap();
+        assert_eq!(std::str::from_utf8(buf.get_ref()).unwrap(), "\x1b[1C");
+
+        c.set_fg(Some(Color::Rgb(10, 20, 30)));
+        let mut buf = Ansi::new(vec![]);
+
+        write_colored_character(&mut buf, &c, true).unwrap();
+        assert_eq!(std::str::from_utf8(buf.get_ref()).unwrap(), "\x1b[1C");
     }
 }
