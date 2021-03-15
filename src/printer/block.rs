@@ -90,7 +90,7 @@ impl Printer for BlockPrinter {
         writeln!(&mut stream)?;
         stream.flush()?;
 
-        Ok((width, height / 2))
+        Ok((width, height / 2 + height % 2))
     }
 }
 
