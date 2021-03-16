@@ -2,8 +2,6 @@ use crate::utils;
 
 /// Configuration struct to customize printing behaviour.
 pub struct Config {
-    /// [resize](crate::resize) the image before printing. Defaults to true.
-    pub resize: bool,
     /// Enable true transparency instead of checkerboard background.
     /// Available only for the block printer. Defaults to false.
     pub transparent: bool,
@@ -36,7 +34,6 @@ pub struct Config {
 impl std::default::Default for Config {
     fn default() -> Self {
         Self {
-            resize: true,
             transparent: false,
             absolute_offset: true,
             x: 0,

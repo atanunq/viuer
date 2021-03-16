@@ -24,12 +24,63 @@ pub use iterm::is_iterm_supported;
 pub trait Printer {
     // Print the given image in the terminal while respecting the options in the config struct.
     // Return the dimensions of the printed image in **terminal cells**.
-    fn print(&self, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)>;
-    fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {
+    fn print(
+        &self,
+        stdout: &mut impl Write,
+        img: &DynamicImage,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)>;
+    fn print_from_file(
+        &self,
+        stdout: &mut impl Write,
+        filename: &str,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
         let img = image::io::Reader::open(filename)?
             .with_guessed_format()?
             .decode()?;
-        self.print(&img, config)
+        self.print(stdout, &img, config)
+    }
+}
+
+#[allow(non_camel_case_types)]
+pub enum PrinterType {
+    Block,
+    Kitty,
+    iTerm,
+    #[cfg(feature = "sixel")]
+    Sixel,
+}
+
+impl Printer for PrinterType {
+    fn print(
+        &self,
+        stdout: &mut impl Write,
+        img: &DynamicImage,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
+        match self {
+            PrinterType::Block => BlockPrinter.print(stdout, img, config),
+            PrinterType::Kitty => KittyPrinter.print(stdout, img, config),
+            PrinterType::iTerm => iTermPrinter.print(stdout, img, config),
+            #[cfg(feature = "sixel")]
+            PrinterType::Sixel => SixelPrinter.print(stdout, img, config),
+        }
+    }
+
+    fn print_from_file(
+        &self,
+        stdout: &mut impl Write,
+        filename: &str,
+        config: &Config,
+    ) -> ViuResult<(u32, u32)> {
+        match self {
+            PrinterType::Block => BlockPrinter.print_from_file(stdout, filename, config),
+            PrinterType::Kitty => KittyPrinter.print_from_file(stdout, filename, config),
+            PrinterType::iTerm => iTermPrinter.print_from_file(stdout, filename, config),
+            #[cfg(feature = "sixel")]
+            PrinterType::Sixel => SixelPrinter.print_from_file(stdout, filename, config),
+        }
     }
 }
 
@@ -39,8 +90,13 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
     let (w, h) = find_best_fit(img, width, height);
 
     // find_best_fit returns values in terminal cells. Hence, we multiply by two
-    // because a 5x10 image can fit in 5x5 cells.
-    img.resize_exact(w, 2 * h, image::imageops::FilterType::Triangle)
+    // because a 5x10 image can fit in 5x5 cells. However, a 5x9 image will also
+    // fit in 5x5 and 1 is deducted in such cases.
+    img.resize_exact(
+        w,
+        2 * h - img.height() % 2,
+        image::imageops::FilterType::Triangle,
+    )
 }
 
 /// Find the best dimensions for the printed image, based on user's input.
@@ -102,7 +158,7 @@ fn fit_dimensions(width: u32, height: u32, bound_width: u32, bound_height: u32) 
     let bound_height = 2 * bound_height;
 
     if width <= bound_width && height <= bound_height {
-        return (width, std::cmp::max(1, height / 2));
+        return (width, std::cmp::max(1, height / 2 + height % 2));
     }
 
     let ratio = width * bound_height;
@@ -162,7 +218,7 @@ mod tests {
     }
 
     fn best_fit_large_test_image() -> DynamicImage {
-        DynamicImage::ImageRgba8(image::RgbaImage::new(600, 500))
+        DynamicImage::ImageRgba8(image::RgbaImage::new(600, 499))
     }
 
     fn best_fit_small_test_image() -> DynamicImage {
@@ -170,7 +226,7 @@ mod tests {
     }
 
     fn resize_get_large_test_image() -> DynamicImage {
-        DynamicImage::ImageRgba8(image::RgbaImage::new(1000, 800))
+        DynamicImage::ImageRgba8(image::RgbaImage::new(1000, 799))
     }
 
     fn resize_get_small_test_image() -> DynamicImage {
@@ -187,7 +243,7 @@ mod tests {
         let img = resize_get_large_test_image();
         let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 60);
-        assert_eq!(new_img.height(), 46);
+        assert_eq!(new_img.height(), 45);
 
         let img = resize_get_small_test_image();
         let new_img = resize(&img, width, height);
@@ -203,7 +259,7 @@ mod tests {
         let img = resize_get_large_test_image();
         let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 100);
-        assert_eq!(new_img.height(), 80);
+        assert_eq!(new_img.height(), 77);
 
         let img = resize_get_small_test_image();
         let new_img = resize(&img, width, height);
@@ -219,7 +275,7 @@ mod tests {
         let img = resize_get_large_test_image();
         let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 225);
-        assert_eq!(new_img.height(), 180);
+        assert_eq!(new_img.height(), 179);
 
         height = Some(4);
         let img = resize_get_small_test_image();
@@ -236,7 +292,7 @@ mod tests {
         let img = resize_get_large_test_image();
         let new_img = resize(&img, width, height);
         assert_eq!(new_img.width(), 15);
-        assert_eq!(new_img.height(), 18);
+        assert_eq!(new_img.height(), 17);
 
         let img = resize_get_small_test_image();
         let new_img = resize(&img, width, height);
@@ -259,7 +315,7 @@ mod tests {
         let img = best_fit_small_test_image();
         let (w, h) = find_best_fit(&img, width, height);
         assert_eq!(w, 40);
-        assert_eq!(h, 12);
+        assert_eq!(h, 13);
 
         let img = DynamicImage::ImageRgba8(image::RgbaImage::new(160, 80));
         let (w, h) = find_best_fit(&img, width, height);
@@ -280,7 +336,7 @@ mod tests {
         let img = best_fit_small_test_image();
         let (w, h) = find_best_fit(&img, width, height);
         assert_eq!(w, 40);
-        assert_eq!(h, 12);
+        assert_eq!(h, 13);
 
         let width = Some(6);
         let (w, h) = find_best_fit(&img, width, height);
@@ -339,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_fit_smaller_than_bounds() {
-        assert_eq!((4, 1), fit_dimensions(4, 3, 80, 24));
+        assert_eq!((4, 2), fit_dimensions(4, 3, 80, 24));
         assert_eq!((4, 1), fit_dimensions(4, 1, 80, 24));
     }
 

@@ -26,9 +26,12 @@
 //! print_from_file("img.jpg", &conf).expect("Image printing failed.");
 //! ```
 
-use crossterm::execute;
+use crossterm::{
+    cursor::{RestorePosition, SavePosition},
+    execute,
+};
 use image::DynamicImage;
-use printer::Printer;
+use printer::{Printer, PrinterType};
 
 mod config;
 mod error;
@@ -69,15 +72,13 @@ pub use printer::is_sixel_supported;
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     let mut stdout = std::io::stdout();
     if config.restore_cursor {
-        execute!(&mut stdout, crossterm::cursor::SavePosition)?;
+        execute!(&mut stdout, SavePosition)?;
     }
 
-    let printer = choose_printer(config);
-
-    let (w, h) = printer.print(img, config)?;
+    let (w, h) = choose_printer(config).print(&mut stdout, img, config)?;
 
     if config.restore_cursor {
-        execute!(&mut stdout, crossterm::cursor::RestorePosition)?;
+        execute!(&mut stdout, RestorePosition)?;
     };
 
     Ok((w, h))
@@ -100,32 +101,30 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
 pub fn print_from_file(filename: &str, config: &Config) -> ViuResult<(u32, u32)> {
     let mut stdout = std::io::stdout();
     if config.restore_cursor {
-        execute!(&mut stdout, crossterm::cursor::SavePosition)?;
+        execute!(&mut stdout, SavePosition)?;
     }
 
-    let printer = choose_printer(config);
-
-    let (w, h) = printer.print_from_file(filename, config)?;
+    let (w, h) = choose_printer(config).print_from_file(&mut stdout, filename, config)?;
 
     if config.restore_cursor {
-        execute!(&mut stdout, crossterm::cursor::RestorePosition)?;
+        execute!(&mut stdout, RestorePosition)?;
     };
 
     Ok((w, h))
 }
 
 // Choose the appropriate printer to use based on user config and availability
-fn choose_printer(config: &Config) -> Box<dyn Printer> {
+fn choose_printer(config: &Config) -> PrinterType {
     #[cfg(feature = "sixel")]
     if config.use_sixel && is_sixel_supported() {
-        return Box::new(printer::SixelPrinter {});
+        return PrinterType::Sixel;
     }
 
     if config.use_iterm && is_iterm_supported() {
-        Box::new(printer::iTermPrinter {})
+        PrinterType::iTerm
     } else if config.use_kitty && get_kitty_support() != KittySupport::None {
-        Box::new(printer::KittyPrinter {})
+        PrinterType::Kitty
     } else {
-        Box::new(printer::BlockPrinter {})
+        PrinterType::Block
     }
 }
