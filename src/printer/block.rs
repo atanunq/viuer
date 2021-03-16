@@ -148,7 +148,6 @@ fn write_colored_character(
     Ok(())
 }
 
-#[inline]
 fn is_pixel_transparent(pixel: (u32, u32, &Rgba<u8>)) -> bool {
     pixel.2[3] == 0
 }
