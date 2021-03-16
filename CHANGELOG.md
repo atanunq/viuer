@@ -1,4 +1,4 @@
-## Unreleased
+## 0.4.0
 - Experimental Sixel support
 - Remove `resize` Config option
 - Change `Printer` trait function signatures

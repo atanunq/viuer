@@ -18,12 +18,8 @@ For a demo of the library's usage and example screenshots, see [`viu`](https://g
 
 ## Examples
 
-```toml
-# in Cargo.toml, under [dependencies]
-viuer = "0.3"
-```
 ```rust
-// in src/main.rs
+// src/main.rs
 use viuer::{print_from_file, Config};
 
 fn main() {
