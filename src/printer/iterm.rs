@@ -3,7 +3,10 @@ use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use image::{DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
-use std::{io::{BufReader, Read, Write}, path::Path};
+use std::{
+    io::{BufReader, Read, Write},
+    path::Path,
+};
 
 #[allow(non_camel_case_types)]
 pub struct iTermPrinter;
