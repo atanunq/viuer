@@ -3,7 +3,7 @@ use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use image::{DynamicImage, GenericImageView};
 use lazy_static::lazy_static;
-use std::io::{BufReader, Read, Write};
+use std::{io::{BufReader, Read, Write}, path::Path};
 
 #[allow(non_camel_case_types)]
 pub struct iTermPrinter;
@@ -38,10 +38,10 @@ impl Printer for iTermPrinter {
         print_buffer(stdout, img, &png_bytes[..], config)
     }
 
-    fn print_from_file(
+    fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
-        filename: &str,
+        filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         let file = std::fs::File::open(filename)?;
