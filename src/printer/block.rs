@@ -83,7 +83,7 @@ fn print_to_writecolor(
 
         if !is_even_row && !is_last_row {
             stdout.reset()?;
-            writeln!(stdout)?;
+            writeln!(stdout, "\r")?;
         }
     }
 
