@@ -138,7 +138,7 @@ fn print_local(
         img.height(),
         w,
         h,
-        base64::encode(path.to_str().ok_or_else(|| ViuError::IO(Error::new(
+        base64::encode(path.to_str().ok_or_else(|| ViuError::Io(Error::new(
             ErrorKind::Other,
             "Could not convert path to &str"
         )))?)

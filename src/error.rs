@@ -7,7 +7,7 @@ pub enum ViuError {
     /// Error while doing transformations with the [`image`] crate
     Image(image::ImageError),
     /// Error while doing IO operations
-    IO(std::io::Error),
+    Io(std::io::Error),
     /// Error while doing [`crossterm`] operations
     Crossterm(crossterm::ErrorKind),
     /// Invalid configuration provided
@@ -27,7 +27,7 @@ impl std::error::Error for ViuError {}
 
 impl From<std::io::Error> for ViuError {
     fn from(err: std::io::Error) -> Self {
-        ViuError::IO(err)
+        ViuError::Io(err)
     }
 }
 impl From<image::ImageError> for ViuError {
@@ -59,7 +59,7 @@ impl std::fmt::Display for ViuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ViuError::Image(e) => write!(f, "Image error: {}", e),
-            ViuError::IO(e) => write!(f, "IO error: {}", e),
+            ViuError::Io(e) => write!(f, "IO error: {}", e),
             ViuError::Crossterm(e) => write!(f, "Crossterm error: {}", e),
             ViuError::InvalidConfiguration(s) => write!(f, "Invalid Configuration: {}", s),
             ViuError::Tempfile(e) => write!(f, "Tempfile error: {}", e),
