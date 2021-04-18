@@ -83,7 +83,7 @@ fn print_to_writecolor(
 
         if !is_even_row && !is_last_row {
             stdout.reset()?;
-            writeln!(stdout)?;
+            writeln!(stdout, "\r")?;
         }
     }
 
@@ -198,7 +198,7 @@ mod tests {
 
         assert_eq!(
             std::str::from_utf8(buf.get_ref()).unwrap(),
-            "\x1b[1;1H\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\n\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\n"
+            "\x1b[1;1H\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\r\n\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\n"
         );
     }
 
@@ -217,7 +217,7 @@ mod tests {
 
         assert_eq!(
             std::str::from_utf8(buf.get_ref()).unwrap(),
-            "\x1b[1;1H\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[0m\n\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[0m\n"
+            "\x1b[1;1H\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[0m\r\n\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[1C\x1b[0m\n"
         );
     }
 
@@ -236,7 +236,7 @@ mod tests {
 
         assert_eq!(
             std::str::from_utf8(buf.get_ref()).unwrap(),
-            "\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\n\x1b[0m\x1b[38;5;241m▀\x1b[0m\x1b[38;5;247m▀\x1b[0m\x1b[38;5;241m▀\x1b[0m\x1b[38;5;247m▀\x1b[0m\n"
+            "\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\r\n\x1b[0m\x1b[38;5;241m▀\x1b[0m\x1b[38;5;247m▀\x1b[0m\x1b[38;5;241m▀\x1b[0m\x1b[38;5;247m▀\x1b[0m\n"
         );
     }
 
