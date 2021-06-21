@@ -1,3 +1,10 @@
+## 0.5.0
+- Upgrade to `crossterm` 0.20
+- Remove `ViuError::Crossterm`
+- Rename `ViuError::IO` -> `ViuError::Io`
+- Change `print_from_file` signature to take `AsRef<Path>` instead of `&str`
+- Add carriage return after every line of printed blocks
+
 ## 0.4.0
 - Experimental Sixel support
 - Remove `resize` Config option
