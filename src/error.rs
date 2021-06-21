@@ -36,12 +36,6 @@ impl From<image::ImageError> for ViuError {
     }
 }
 
-impl From<crossterm::ErrorKind> for ViuError {
-    fn from(err: crossterm::ErrorKind) -> Self {
-        ViuError::Crossterm(err)
-    }
-}
-
 impl From<tempfile::PersistError> for ViuError {
     fn from(err: tempfile::PersistError) -> Self {
         ViuError::Tempfile(err)

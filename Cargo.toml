@@ -14,7 +14,7 @@ exclude = [".github"]
 
 [dependencies]
 termcolor = "1.1"
-crossterm = "0.19"
+crossterm = "0.20"
 ansi_colours = "1.0"
 image = "0.23"
 base64 = "0.13"
