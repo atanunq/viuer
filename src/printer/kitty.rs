@@ -93,8 +93,9 @@ fn has_local_support() -> ViuResult {
 
     // TODO: could use a queue of length 3
     while let Ok(key) = term.read_key() {
-        // the response will end with Esc('x1b'), followed by Backslash('\')
-        let should_break = key == Key::UnknownEscSeq(vec!['\\']);
+        // The response will end with Esc('x1b'), followed by Backslash('\').
+        // Also, break if the Unknown key is found, which is returned when we're not in a tty
+        let should_break = key == Key::UnknownEscSeq(vec!['\\']) || key == Key::Unknown;
         response.push(key);
         if should_break {
             break;
