@@ -8,8 +8,6 @@ pub enum ViuError {
     Image(image::ImageError),
     /// Error while doing IO operations
     Io(std::io::Error),
-    /// Error while doing [`crossterm`] operations
-    Crossterm(crossterm::ErrorKind),
     /// Invalid configuration provided
     InvalidConfiguration(String),
     /// Error while creating temp files
@@ -54,7 +52,6 @@ impl std::fmt::Display for ViuError {
         match self {
             ViuError::Image(e) => write!(f, "Image error: {}", e),
             ViuError::Io(e) => write!(f, "IO error: {}", e),
-            ViuError::Crossterm(e) => write!(f, "Crossterm error: {}", e),
             ViuError::InvalidConfiguration(s) => write!(f, "Invalid Configuration: {}", s),
             ViuError::Tempfile(e) => write!(f, "Tempfile error: {}", e),
             ViuError::KittyResponse(keys) => write!(f, "Kitty response: {:?}", keys),
