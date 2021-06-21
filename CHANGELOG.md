@@ -1,3 +1,6 @@
+## 0.5.1
+- Fix memory leak when checking for Kitty support not in tty
+
 ## 0.5.0
 - Upgrade to `crossterm` 0.20
 - Remove `ViuError::Crossterm`
