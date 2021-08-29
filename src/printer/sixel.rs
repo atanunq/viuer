@@ -26,7 +26,7 @@ impl Printer for SixelPrinter {
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
-        let (w, h) = find_best_fit(&img, config.width, config.height);
+        let (w, h) = find_best_fit(img, config.width, config.height);
 
         //TODO: the max 1000 width is an xterm bug workaround, other terminals may not be affected
         let resized_img =

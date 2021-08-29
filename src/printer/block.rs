@@ -40,7 +40,7 @@ fn print_to_writecolor(
     adjust_offset(stdout, &Config { x: 0, ..*config })?;
 
     // resize the image so that it fits in the constraints, if any
-    let img = super::resize(&img, config.width, config.height);
+    let img = super::resize(img, config.width, config.height);
     let (width, height) = img.dimensions();
 
     let mut row_color_buffer: Vec<ColorSpec> = vec![ColorSpec::new(); width as usize];

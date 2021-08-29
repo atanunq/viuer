@@ -213,7 +213,7 @@ mod tests {
 
     fn test_adjust_offset_output(config: &Config, str: &str) {
         let mut vec = Vec::new();
-        adjust_offset(&mut vec, &config).unwrap();
+        adjust_offset(&mut vec, config).unwrap();
         assert_eq!(std::str::from_utf8(&vec).unwrap(), str);
     }
 
