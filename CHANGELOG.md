@@ -1,3 +1,7 @@
+## 0.5.2
+- Use iTerm protocol for WezTerm and mintty
+- Fix compiler warnings
+
 ## 0.5.1
 - Fix memory leak when checking for Kitty support not in tty
 
