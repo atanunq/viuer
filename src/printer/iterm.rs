@@ -87,7 +87,7 @@ fn print_buffer(
 // Check if the iTerm protocol can be used
 fn check_iterm_support() -> bool {
     if let Ok(term) = std::env::var("TERM_PROGRAM") {
-        if term.contains("iTerm") {
+        if term.contains("iTerm") || term.contains("WezTerm") || term.contains("mintty") {
             return true;
         }
     }
