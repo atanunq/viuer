@@ -47,6 +47,7 @@ pub use utils::terminal_size;
 
 #[cfg(feature = "sixel")]
 pub use printer::is_sixel_supported;
+use std::io::Write;
 
 /// Default printing method. Uses either iTerm or Kitty graphics protocol, if supported,
 /// and half blocks otherwise.
@@ -73,20 +74,25 @@ pub use printer::is_sixel_supported;
 /// ```
 pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     let mut stdout = std::io::stdout();
+    write(&mut stdout, img, config)
+}
+
+/// An extension of the [print][crate::print] method with possibility to alter output stream.
+pub fn write(out_stream: &mut impl Write, img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     if config.restore_cursor {
-        execute!(&mut stdout, SavePosition)?;
+        execute!(out_stream, SavePosition)?;
     }
 
-    let (w, h) = choose_printer(config).print(&mut stdout, img, config)?;
+    let (w, h) = choose_printer(config).print(out_stream, img, config)?;
 
     if config.restore_cursor {
-        execute!(&mut stdout, RestorePosition)?;
+        execute!(out_stream, RestorePosition)?;
     };
 
     Ok((w, h))
 }
 
-/// Helper method that reads a file, tries to decode it and prints it.
+/// Helper method that reads a file, tries to decode it and prints it to [stdout][std::io::stdout].
 ///
 /// ## Example
 /// ```no_run
@@ -102,14 +108,20 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
 /// ```
 pub fn print_from_file<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResult<(u32, u32)> {
     let mut stdout = std::io::stdout();
+    write_from_file(&mut stdout, filename, config)
+}
+
+/// An extension of the [print_from_file][crate::print_from_file] method with possibility to
+/// alter output stream.
+pub fn write_from_file<P: AsRef<Path>>(out_stream: &mut impl Write, filename: P, config: &Config) -> ViuResult<(u32, u32)> {
     if config.restore_cursor {
-        execute!(&mut stdout, SavePosition)?;
+        execute!(out_stream, SavePosition)?;
     }
 
-    let (w, h) = choose_printer(config).print_from_file(&mut stdout, filename, config)?;
+    let (w, h) = choose_printer(config).print_from_file(out_stream, filename, config)?;
 
     if config.restore_cursor {
-        execute!(&mut stdout, RestorePosition)?;
+        execute!(out_stream, RestorePosition)?;
     };
 
     Ok((w, h))
