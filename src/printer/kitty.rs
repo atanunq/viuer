@@ -144,7 +144,9 @@ fn print_local(
             "Could not convert path to &str"
         )))?)
     )?;
-    writeln!(stdout)?;
+    if config.newline {
+        writeln!(stdout)?;
+    }
     stdout.flush()?;
 
     Ok((w, h))
@@ -185,7 +187,9 @@ fn print_remote(
         let m = if iter.peek().is_some() { 1 } else { 0 };
         write!(stdout, "\x1b_Gm={};{}\x1b\\", m, chunk)?;
     }
-    writeln!(stdout)?;
+    if config.newline {
+        writeln!(stdout)?;
+    }
     stdout.flush()?;
     Ok((w, h))
 }

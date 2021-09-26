@@ -88,7 +88,9 @@ fn print_to_writecolor(
     }
 
     stdout.reset()?;
-    writeln!(stdout)?;
+    if config.newline {
+        writeln!(stdout)?;
+    }
     stdout.flush()?;
 
     Ok((width, height / 2 + height % 2))

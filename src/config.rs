@@ -16,6 +16,8 @@ pub struct Config {
     /// Take a note of cursor position before printing and restore it when finished.
     /// Defaults to false.
     pub restore_cursor: bool,
+    /// Put new line after after image output. Defaults to `true`.
+    pub newline: bool,
     /// Optional image width. Defaults to None.
     pub width: Option<u32>,
     /// Optional image height. Defaults to None.
@@ -39,6 +41,7 @@ impl std::default::Default for Config {
             x: 0,
             y: 0,
             restore_cursor: false,
+            newline: true,
             width: None,
             height: None,
             truecolor: utils::truecolor_available(),
