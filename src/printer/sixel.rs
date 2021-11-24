@@ -82,7 +82,7 @@ fn check_device_attrs() -> ViuResult<bool> {
 fn check_sixel_support() -> bool {
     if let Ok(term) = std::env::var("TERM") {
         match term.as_str() {
-            "mlterm" | "yaft-256color" | "foot" => return true,
+            "mlterm" | "yaft-256color" | "foot" | "foot-extra" => return true,
             "st-256color" | "xterm" | "xterm-256color" => {
                 return check_device_attrs().unwrap_or(false)
             }
