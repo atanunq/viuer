@@ -1,3 +1,6 @@
+## 0.5.3
+- Bump `crossterm` and `console` dependencies
+
 ## 0.5.2
 - Use iTerm protocol for WezTerm and mintty
 - Fix compiler warnings
