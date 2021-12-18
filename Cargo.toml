@@ -14,12 +14,12 @@ exclude = [".github"]
 
 [dependencies]
 termcolor = "1.1"
-crossterm = "0.20"
+crossterm = "0.22"
 ansi_colours = "1.0"
 image = "0.23"
 base64 = "0.13"
 tempfile = "3.1"
-console = { version = "0.14", default-features = false }
+console = { version = "0.15", default-features = false }
 lazy_static = "1.4"
 sixel-sys = { version = "0.3.1", optional = true }
 
