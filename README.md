@@ -3,13 +3,6 @@ Display images in the terminal with ease.
 
 ![ci](https://github.com/atanunq/viuer/workflows/ci/badge.svg)
 
-## Usage
-Add this to your `Cargo.toml`
-```toml
-viuer = "0.5.3"
-```
-For more info visit [crate.io page](https://crates.io/crates/viuer)
-
 `viuer` is a Rust library that makes it easy to show images in the
 terminal. It has a straightforward interface and is configured
 through a single struct. The default printing method is through
@@ -20,6 +13,13 @@ being displayed in specific environments:
 - [Kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
 - [iTerm](https://iterm2.com/documentation-images.html)
 - [Sixel](https://github.com/saitoha/libsixel) (behind the "sixel" feature gate)
+
+## Usage
+Add this to `Cargo.toml`:
+```toml
+[dependencies]
+viuer = "0.5.3"
+```
 
 For a demo of the library's usage and example screenshots, see [`viu`](https://github.com/atanunq/viu).
 
