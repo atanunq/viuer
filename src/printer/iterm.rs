@@ -1,7 +1,7 @@
 use crate::error::ViuResult;
 use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
-use image::{DynamicImage, GenericImageView};
+use image::{DynamicImage, GenericImageView, ImageEncoder};
 use lazy_static::lazy_static;
 use std::{
     io::{BufReader, Read, Write},
@@ -31,7 +31,7 @@ impl Printer for iTermPrinter {
 
         // Transform the dynamic image to a PNG which can be given directly to iTerm
         let mut png_bytes: Vec<u8> = Vec::new();
-        let _ = image::codecs::png::PngEncoder::new(&mut png_bytes).encode(
+        let _ = image::codecs::png::PngEncoder::new(&mut png_bytes).write_image(
             img.as_bytes(),
             width,
             height,
@@ -112,6 +112,6 @@ mod tests {
         let mut vec = Vec::new();
 
         assert_eq!(iTermPrinter.print(&mut vec, &img, &config).unwrap(), (2, 2));
-        assert_eq!(std::str::from_utf8(&vec).unwrap(), "\x1b[4;5H\x1b]1337;File=inline=1;preserveAspectRatio=1;size=74;width=2;height=2:iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAAEUlEQVR4nGNkgAJUBhMLGwcAAHkAGFlFRLoAAAAASUVORK5CYII=\x07\n");
+        assert_eq!(std::str::from_utf8(&vec).unwrap(), "\x1b[4;5H\x1b]1337;File=inline=1;preserveAspectRatio=1;size=71;width=2;height=2:iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAADklEQVR4nGPADphY2DgAAEMAFaDvIXoAAAAASUVORK5CYII=\x07\n");
     }
 }

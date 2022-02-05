@@ -2,7 +2,6 @@ use crate::error::{ViuError, ViuResult};
 use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use console::{Key, Term};
-use image::GenericImageView;
 use lazy_static::lazy_static;
 use std::io::Write;
 use std::io::{Error, ErrorKind};
