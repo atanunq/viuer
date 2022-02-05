@@ -18,7 +18,7 @@ being displayed in specific environments:
 Add this to `Cargo.toml`:
 ```toml
 [dependencies]
-viuer = "0.5.3"
+viuer = "0.6"
 ```
 
 For a demo of the library's usage and example screenshots, see [`viu`](https://github.com/atanunq/viu).

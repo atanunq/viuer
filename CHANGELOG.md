@@ -1,3 +1,6 @@
+## 0.6.0
+- Upgrade `image` dependency
+
 ## 0.5.3
 - Bump `crossterm` and `console` dependencies
 
