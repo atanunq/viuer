@@ -2,7 +2,7 @@
 name = "viuer"
 version = "0.6.0"
 authors = ["Atanas Yankov <atanas.yankov98@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Display images in the terminal"
 documentation = "https://docs.rs/viuer"
 readme = "README.md"
@@ -14,7 +14,7 @@ exclude = [".github"]
 
 [dependencies]
 termcolor = "1.1"
-crossterm = "0.22"
+crossterm = "0.23"
 ansi_colours = "1.0"
 image = "0.24"
 base64 = "0.13"

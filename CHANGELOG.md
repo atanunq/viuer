@@ -1,3 +1,7 @@
+## Unreleased
+- Upgrade `crossterm` dependency
+- Move to 2021 Edition
+
 ## 0.6.0
 - Upgrade `image` dependency
 
