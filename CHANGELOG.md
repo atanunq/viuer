@@ -1,4 +1,4 @@
-## Unreleased
+## 0.6.1
 - Upgrade `crossterm` dependency
 - Move to 2021 Edition
 
