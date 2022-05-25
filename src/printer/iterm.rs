@@ -91,6 +91,11 @@ fn check_iterm_support() -> bool {
             return true;
         }
     }
+    if let Ok(lc_term) = std::env::var("LC_TERMINAL") {
+        if lc_term.contains("iTerm") || lc_term.contains("WezTerm") || lc_term.contains("mintty") {
+            return true;
+        }
+    }
     false
 }
 
