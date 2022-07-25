@@ -43,7 +43,7 @@ impl Printer for KittyPrinter {
     // fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {}
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 /// The extend to which the Kitty graphics protocol can be used.
 pub enum KittySupport {
     /// The Kitty graphics protocol is not supported.
