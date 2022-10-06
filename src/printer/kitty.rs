@@ -6,6 +6,27 @@ use lazy_static::lazy_static;
 use std::io::Write;
 use std::io::{Error, ErrorKind};
 
+mod ioctl {
+    use nix::ioctl_read_bad;
+    use nix::libc::{c_ushort, TIOCGWINSZ};
+
+    #[repr(C)]
+    #[derive(Default, Debug)]
+    pub struct TermSize {
+        pub rows: c_ushort,
+        pub columns: c_ushort,
+        pub x: c_ushort,
+        pub y: c_ushort,
+    }
+
+    ioctl_read_bad!(
+        /// Get terminal window size
+        tiocgwinsz,
+        TIOCGWINSZ,
+        TermSize
+    );
+}
+
 pub struct KittyPrinter;
 
 const TEMP_FILE_PREFIX: &str = ".tmp.viuer.";
@@ -115,6 +136,18 @@ fn has_local_support() -> ViuResult {
     Err(ViuError::KittyResponse(response))
 }
 
+/// resizes the image to the desired number of columns/rows without stretch
+fn resize(img: &image::DynamicImage, c: u32, r: u32) -> Option<image::DynamicImage> {
+    let mut tsize = ioctl::TermSize::default();
+    unsafe { ioctl::tiocgwinsz(0, &mut tsize as *mut _) }
+        .ok()
+        .and(Some(img.resize(
+            (c as f64 * tsize.x as f64 / tsize.columns as f64) as u32,
+            (r as f64 * tsize.y as f64 / tsize.rows as f64) as u32,
+            image::imageops::FilterType::Triangle,
+        )))
+}
+
 // Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
 fn print_local(
@@ -122,22 +155,35 @@ fn print_local(
     img: &image::DynamicImage,
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
-    let rgba = img.to_rgba8();
-    let raw_img = rgba.as_raw();
-    let path = store_in_tmp_file(raw_img)?;
-
     adjust_offset(stdout, config)?;
 
     // get the desired width and height
     let (w, h) = find_best_fit(img, config.width, config.height);
 
+    let temp;
+    let (img, not_resized) = if config.do_not_stretch {
+        match resize(img, w, h) {
+            Some(img) => {
+                temp = img;
+                (&temp, false)
+            }
+            None => (img, true),
+        }
+    } else {
+        (img, true)
+    };
+
+    let rgba = img.to_rgba8();
+    let raw_img = rgba.as_raw();
+    let path = store_in_tmp_file(raw_img)?;
+
+    write!(stdout, "\x1b_Gf=32,s={},v={},", img.width(), img.height())?;
+    if not_resized {
+        write!(stdout, "c={},r={},", w, h)?
+    }
     write!(
         stdout,
-        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t;{}\x1b\\",
-        img.width(),
-        img.height(),
-        w,
-        h,
+        "a=T,t=t;{}\x1b\\",
         base64::encode(path.to_str().ok_or_else(|| ViuError::Io(Error::new(
             ErrorKind::Other,
             "Could not convert path to &str"
@@ -156,27 +202,41 @@ fn print_remote(
     img: &image::DynamicImage,
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
+    adjust_offset(stdout, config)?;
+
+    let (w, h) = find_best_fit(img, config.width, config.height);
+
+    let temp;
+    let (img, not_resized) = if config.do_not_stretch {
+        match resize(img, w, h) {
+            Some(img) => {
+                temp = img;
+                (&temp, false)
+            }
+            None => (img, true),
+        }
+    } else {
+        (img, true)
+    };
+
     let rgba = img.to_rgba8();
     let raw = rgba.as_raw();
     let encoded = base64::encode(raw);
     let mut iter = encoded.chars().peekable();
-
-    adjust_offset(stdout, config)?;
-
-    let (w, h) = find_best_fit(img, config.width, config.height);
 
     let first_chunk: String = iter.by_ref().take(4096).collect();
 
     // write the first chunk, which describes the image
     write!(
         stdout,
-        "\x1b_Gf=32,a=T,t=d,s={},v={},c={},r={},m=1;{}\x1b\\",
+        "\x1b_Gf=32,a=T,t=d,s={},v={},",
         img.width(),
-        img.height(),
-        w,
-        h,
-        first_chunk
+        img.height()
     )?;
+    if not_resized {
+        write!(stdout, "c={},r={},", w, h)?
+    }
+    write!(stdout, "m=1;{}\x1b\\", first_chunk)?;
 
     // write all the chunks, each containing 4096 bytes of data
     while iter.peek().is_some() {
@@ -215,6 +275,7 @@ mod tests {
         let config = Config {
             x: 4,
             y: 3,
+            do_not_stretch: false,
             ..Default::default()
         };
 
@@ -234,6 +295,7 @@ mod tests {
         let config = Config {
             x: 2,
             y: 5,
+            do_not_stretch: false,
             ..Default::default()
         };
 

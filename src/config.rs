@@ -20,6 +20,9 @@ pub struct Config {
     pub width: Option<u32>,
     /// Optional image height. Defaults to None.
     pub height: Option<u32>,
+    /// Do not stretch the image to fill the cells. Defaults to true.
+    /// Valid only for kitty graphics protocol
+    pub do_not_stretch: bool,
     /// Use truecolor if the terminal supports it. Defaults to true.
     pub truecolor: bool,
     /// Use Kitty protocol if the terminal supports it. Defaults to true.
@@ -41,6 +44,7 @@ impl std::default::Default for Config {
             restore_cursor: false,
             width: None,
             height: None,
+            do_not_stretch: true,
             truecolor: utils::truecolor_available(),
             use_kitty: true,
             use_iterm: true,
