@@ -1,3 +1,7 @@
+## 0.6.2
+- Upgrade `crossterm` dependency to 0.25
+- Check `LC_TERMINAL` env variable when deciding iTerm support
+
 ## 0.6.1
 - Upgrade `crossterm` dependency
 - Move to 2021 Edition
