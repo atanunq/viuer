@@ -21,14 +21,11 @@ base64 = "0.13"
 tempfile = "3.1"
 console = { version = "0.15", default-features = false }
 lazy_static = "1.4"
-sixel-sys = { version = "0.3.1", optional = true }
 
-# avoid feature and crate name collision (thanks rabite0/hunter)
 [dependencies.sixel-rs]
-package = "sixel"
-version = "0.3.2"
+version = "0.3.3"
 optional = true
 
 [features]
 default = []
-sixel = ["sixel-rs", "sixel-sys"]
+sixel = ["sixel-rs"]

@@ -46,7 +46,7 @@ impl Printer for SixelPrinter {
         let frame = QuickFrameBuilder::new()
             .width(width as usize)
             .height(height as usize)
-            .format(sixel_sys::PixelFormat::RGBA8888)
+            .format(sixel_rs::sys::PixelFormat::RGBA8888)
             .pixels(raw.to_vec());
 
         encoder.encode_bytes(frame)?;
