@@ -191,18 +191,23 @@ fn adjust_offset(stdout: &mut impl Write, config: &Config) -> ViuResult {
                 "absolute_offset is true but y offset is negative".to_owned(),
             ));
         }
-    } else if config.y < 0 {
-        // MoveUp if negative
-        execute!(stdout, MoveToPreviousLine(-config.y as u16))?;
-        execute!(stdout, MoveRight(config.x))?;
     } else {
-        // Move down y lines
-        for _ in 0..config.y {
-            // writeln! is used instead of MoveDown to force scrolldown
-            // observed when config.y > 0 and cursor is on the last terminal line
-            writeln!(stdout)?;
+        if config.y < 0 {
+            // MoveUp if negative
+            execute!(stdout, MoveToPreviousLine(-config.y as u16))?;
+        } else {
+            // Move down y lines
+            for _ in 0..config.y {
+                // writeln! is used instead of MoveDown to force scrolldown
+                // observed when config.y > 0 and cursor is on the last terminal line
+                writeln!(stdout)?;
+            }
         }
-        execute!(stdout, MoveRight(config.x))?;
+
+        // Some terminals interpret 0 as 1, see MoveRight documentation
+        if config.x > 0 {
+            execute!(stdout, MoveRight(config.x))?;
+        }
     }
     Ok(())
 }
@@ -402,6 +407,18 @@ mod tests {
     #[test]
     fn test_fit_equal_to_bounds() {
         assert_eq!((80, 12), fit_dimensions(80, 24, 80, 24));
+    }
+
+    #[test]
+    fn test_zero_offset() {
+        let config = Config {
+            absolute_offset: false,
+            x: 0,
+            y: 0,
+            ..Default::default()
+        };
+        // Should not move at all
+        test_adjust_offset_output(&config, "");
     }
 
     #[test]
