@@ -31,7 +31,7 @@ impl Printer for iTermPrinter {
 
         // Transform the dynamic image to a PNG which can be given directly to iTerm
         let mut png_bytes: Vec<u8> = Vec::new();
-        let _ = image::codecs::png::PngEncoder::new(&mut png_bytes).write_image(
+        image::codecs::png::PngEncoder::new(&mut png_bytes).write_image(
             img.as_bytes(),
             width,
             height,
