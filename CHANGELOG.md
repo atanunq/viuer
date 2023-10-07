@@ -1,3 +1,6 @@
+## 0.7.0
+- Update name of temporary files when using Kitty to contain `tty-graphics-protocol`
+
 ## 0.6.2
 - Upgrade `crossterm` dependency to 0.25
 - Check `LC_TERMINAL` env variable when deciding iTerm support
