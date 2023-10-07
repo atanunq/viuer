@@ -8,7 +8,7 @@ use std::io::{Error, ErrorKind};
 
 pub struct KittyPrinter;
 
-const TEMP_FILE_PREFIX: &str = ".tmp.viuer.";
+const TEMP_FILE_PREFIX: &str = ".tty-graphics-protocol.viuer.";
 lazy_static! {
     static ref KITTY_SUPPORT: KittySupport = check_kitty_support();
 }
