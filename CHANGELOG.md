@@ -1,3 +1,6 @@
+## Unreleased
+- Bump `base64` and `crossterm` dependencies
+
 ## 0.7.0
 - Update name of temporary files when using Kitty to contain `tty-graphics-protocol`
 
