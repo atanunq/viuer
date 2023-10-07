@@ -1,6 +1,7 @@
 use crate::error::ViuResult;
 use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
+use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, GenericImageView, ImageEncoder};
 use lazy_static::lazy_static;
 use std::{
@@ -77,7 +78,7 @@ fn print_buffer(
         img_content.len(),
         w,
         h,
-        base64::encode(img_content)
+        general_purpose::STANDARD.encode(img_content)
     )?;
     stdout.flush()?;
 
