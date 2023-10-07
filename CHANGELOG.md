@@ -1,4 +1,4 @@
-## Unreleased
+## 0.7.1
 - Bump `base64` and `crossterm` dependencies
 
 ## 0.7.0
