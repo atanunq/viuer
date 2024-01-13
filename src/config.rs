@@ -13,6 +13,8 @@ pub struct Config {
     pub x: u16,
     /// Y offset. Can be negative only when `absolute_offset` is `false`. Defaults to 0.
     pub y: i16,
+    /// Z offset. This takes effect in terminals that support this.
+    pub z: i32,
     /// Take a note of cursor position before printing and restore it when finished.
     /// Defaults to false.
     pub restore_cursor: bool,
@@ -38,6 +40,7 @@ impl std::default::Default for Config {
             absolute_offset: true,
             x: 0,
             y: 0,
+            z: 0,
             restore_cursor: false,
             width: None,
             height: None,
