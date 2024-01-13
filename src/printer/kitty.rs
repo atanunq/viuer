@@ -134,11 +134,12 @@ fn print_local(
 
     write!(
         stdout,
-        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t;{}\x1b\\",
+        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t,z={};{}\x1b\\",
         img.width(),
         img.height(),
         w,
         h,
+        config.z,
         general_purpose::STANDARD.encode(path.to_str().ok_or_else(|| ViuError::Io(Error::new(
             ErrorKind::Other,
             "Could not convert path to &str"
@@ -171,11 +172,12 @@ fn print_remote(
     // write the first chunk, which describes the image
     write!(
         stdout,
-        "\x1b_Gf=32,a=T,t=d,s={},v={},c={},r={},m=1;{}\x1b\\",
+        "\x1b_Gf=32,a=T,t=d,s={},v={},c={},r={},m=1,z={};{}\x1b\\",
         img.width(),
         img.height(),
         w,
         h,
+        config.z,
         first_chunk
     )?;
 
@@ -223,7 +225,7 @@ mod tests {
         assert_eq!(print_local(&mut vec, &img, &config).unwrap(), (40, 13));
         let result = std::str::from_utf8(&vec).unwrap();
 
-        assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,t=t;"));
+        assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,t=t,z=0;"));
         assert!(result.ends_with("\x1b\\\n"));
     }
 
@@ -244,7 +246,7 @@ mod tests {
 
         assert_eq!(
             result,
-            "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,m=1;AAAAAAIEBgg=\x1b\\\n"
+            "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,m=1,z=0;AAAAAAIEBgg=\x1b\\\n"
         );
     }
 }
