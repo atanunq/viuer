@@ -73,14 +73,21 @@ fn print_with_add_blocks(
         }
         for x in 0..width {
             if y % 2 == 0 && y < height - 1 { continue }
+
+            // for debugging
+            if y == height - 1 { continue }
+
             let subpixel_img = img8_buffer
                 .view(x * SUBPIXEL64 as u32, y * SUBPIXEL64 as u32, SUBPIXEL64_COLUMNS as u32, SUBPIXEL64_ROWS as u32)
                 .to_image();
             let mut selected = None;
+            let mut selected_score = -1.0;
             for mask in &masks {
-                if let Some(c) = masks::get_mask_colors(&subpixel_img, &mask) {
-                    selected = Some((c, mask));
-                    break;
+                if let Some((score, c1, c2)) = masks::get_mask_colors(&subpixel_img, &mask) {
+                    if selected_score < 0. || selected_score > score {
+                        selected = Some(((c1, c2), mask));
+                        selected_score = score;
+                    }
                 }
             }
             if let Some(((fg_col, bg_col), mask)) = selected {
@@ -410,7 +417,7 @@ mod tests {
     }
 
     // test print the smiley
-    // cargo test --color=always --package viuer --lib printer::block::tests::test_write_img --no-fail-fast test_write_img
+    // cargo test --color=always --package viuer --lib printer::block::tests --no-fail-fast
     #[test]
     fn test_write_img() {
         let conf = Config {
@@ -418,10 +425,10 @@ mod tests {
             x: 0,
             y: 0,
             // set dimensions
-            width: Some(100),
-            height: Some(50),
+            width: Some(40),
+            height: Some(20),
             ..Default::default()
         };
-        print_from_file("smiley.png", &conf).expect("Image printing failed.");
+        print_from_file("pancake.jpg", &conf).expect("Image printing failed.");
     }
 }
