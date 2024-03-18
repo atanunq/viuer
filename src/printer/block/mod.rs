@@ -1,3 +1,6 @@
+mod maskers;
+pub(crate) mod masks;
+
 use crate::error::ViuResult;
 use crate::printer::{adjust_offset, Printer};
 use crate::Config;
@@ -9,6 +12,8 @@ use termcolor::{BufferedStandardStream, Color, ColorChoice, ColorSpec, WriteColo
 
 use crossterm::cursor::MoveRight;
 use crossterm::execute;
+
+
 
 const UPPER_HALF_BLOCK: &str = "\u{2580}";
 const LOWER_HALF_BLOCK: &str = "\u{2584}";
@@ -29,6 +34,24 @@ impl Printer for BlockPrinter {
         let mut stream = BufferedStandardStream::stdout(ColorChoice::Always);
         print_to_writecolor(&mut stream, img, config)
     }
+}
+
+fn print_with_add_blocks(
+    stdout: &mut impl WriteColor,
+    img: &DynamicImage,
+    config: &Config
+) -> ViuResult<(u32, u32)> {
+    // adjust with x=0 and handle horizontal offset entirely below
+    adjust_offset(stdout, &Config { x: 0, ..*config })?;
+
+    // resize the image so that it fits in the constraints, if any
+    let img = super::resize2(img, config.width, config.height);
+    let (width, height) = img.dimensions();
+
+    let img_buffer = img.to_rgba8(); //TODO: Can conversion be avoided?
+    // 1. preprocess image: determine which characters w/ which colors need to be printed
+    // 2. Print each "bulk" pixel
+    todo!()
 }
 
 fn print_to_writecolor(
@@ -238,6 +261,8 @@ mod tests {
             std::str::from_utf8(buf.get_ref()).unwrap(),
             "\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\x1b[38;5;247m\x1b[48;5;241m▄\x1b[0m\x1b[38;5;241m\x1b[48;5;247m▄\x1b[0m\r\n\x1b[0m\x1b[38;5;241m▀\x1b[0m\x1b[38;5;247m▀\x1b[0m\x1b[38;5;241m▀\x1b[0m\x1b[38;5;247m▀\x1b[0m\n"
         );
+
+        println!("{}", std::str::from_utf8(buf.get_ref()).unwrap());
     }
 
     #[test]
