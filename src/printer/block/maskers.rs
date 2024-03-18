@@ -1,6 +1,7 @@
 // expanding our palette to https://en.wikipedia.org/wiki/Block_Elements
 
-// Any characters that could be created by inverting one of these was removed
+// Any characters that could be created by inverting one of these was removed.
+// That leaves 20 in total.
 
 use crate::printer::block::masks::SUBPIXEL64_ROWS;
 
