@@ -36,7 +36,7 @@ pub trait Printer {
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
-        let img = image::io::Reader::open(filename)?
+        let img = image::ImageReader::open(filename)?
             .with_guessed_format()?
             .decode()?;
         self.print(stdout, &img, config)
@@ -95,7 +95,7 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
     img.resize_exact(
         w,
         2 * h - img.height() % 2,
-        image::imageops::FilterType::Triangle,
+        image::imageops::FilterType::CatmullRom,
     )
 }
 

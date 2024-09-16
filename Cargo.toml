@@ -13,17 +13,17 @@ keywords = ["terminal", "image"]
 exclude = [".github"]
 
 [dependencies]
-termcolor = "1.1"
-crossterm = "0.27"
-ansi_colours = "1.0"
-image = "0.24"
-base64 = "0.21.4"
-tempfile = "3.1"
+ansi_colours = "1"
+base64 = "0.22"
 console = { version = "0.15", default-features = false }
-lazy_static = "1.4"
+crossterm = "0.28"
+image = "0.25"
+lazy_static = "1.5"
+tempfile = "3"
+termcolor = "1"
 
 [dependencies.sixel-rs]
-version = "0.3.3"
+version = "0.3"
 optional = true
 
 [features]
