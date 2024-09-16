@@ -61,10 +61,10 @@ fn print_to_writecolor(
                 if config.transparent {
                     None
                 } else {
-                    Some(get_transparency_color(curr_row, pixel.0, config.truecolor))
+                    Some(transparency_color(curr_row, pixel.0, config.truecolor))
                 }
             } else {
-                Some(get_color_from_pixel(pixel, config.truecolor))
+                Some(color_from_pixel(curr_row, pixel, config))
             };
 
             // Even rows modify the background, odd rows the foreground
@@ -152,13 +152,17 @@ fn is_pixel_transparent(pixel: (u32, u32, &Rgba<u8>)) -> bool {
     pixel.2[3] == 0
 }
 
-fn get_transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
-    //imitate the transparent chess board pattern
-    let rgb = if row % 2 == col % 2 {
+fn checkerboard(row: u32, col: u32) -> (u8, u8, u8) {
+    if row % 2 == col % 2 {
         CHECKERBOARD_BACKGROUND_DARK
     } else {
         CHECKERBOARD_BACKGROUND_LIGHT
-    };
+    }
+}
+
+fn transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
+    //imitate the transparent chess board pattern
+    let rgb = checkerboard(row, col);
     if truecolor {
         Color::Rgb(rgb.0, rgb.1, rgb.2)
     } else {
@@ -166,10 +170,25 @@ fn get_transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
     }
 }
 
-fn get_color_from_pixel(pixel: (u32, u32, &Rgba<u8>), truecolor: bool) -> Color {
-    let (_x, _y, data) = pixel;
-    let rgb = (data[0], data[1], data[2]);
-    if truecolor {
+fn mix(a: u8, b: u8, alpha: u8) -> u8 {
+    ((a as u16 * alpha as u16 + b as u16 * (255u16 - alpha as u16)) / 255) as _
+}
+
+fn color_from_pixel(row: u32, pixel: (u32, u32, &Rgba<u8>), config: &Config) -> Color {
+    let col = pixel.0;
+    // We need to blend the pixel's color with the checkerboard pattern.
+    let rgb = if !config.transparent && pixel.2[3] < 255 {
+        (
+            mix(pixel.2[0], checkerboard(row, col).0, pixel.2[3]),
+            mix(pixel.2[1], checkerboard(row, col).1, pixel.2[3]),
+            mix(pixel.2[2], checkerboard(row, col).2, pixel.2[3]),
+        )
+    } else {
+        let (_x, _y, data) = pixel;
+        (data[0], data[1], data[2])
+    };
+
+    if config.truecolor {
         Color::Rgb(rgb.0, rgb.1, rgb.2)
     } else {
         Color::Ansi256(ansi256_from_rgb(rgb))
