@@ -5,13 +5,18 @@ pub struct Config {
     /// Enable true transparency instead of checkerboard background.
     /// Available only for the block printer. Defaults to false.
     pub transparent: bool,
+    /// If we assume the alpha channel is premultiplied for blending with the
+    /// checkerboard background.
+    /// Defaults to true.
+    pub premultiplied_alpha: bool,
     /// Make the x and y offset be relative to the top left terminal corner.
     /// If false, the y offset is relative to the cursor's position.
-    /// Defaults to true.
+    /// Defaults to false.
     pub absolute_offset: bool,
     /// X offset. Defaults to 0.
     pub x: u16,
-    /// Y offset. Can be negative only when `absolute_offset` is `false`. Defaults to 0.
+    /// Y offset. Can be negative only when `absolute_offset` is `false`.
+    /// Defaults to 0.
     pub y: i16,
     /// Take a note of cursor position before printing and restore it when finished.
     /// Defaults to false.
@@ -35,6 +40,7 @@ impl std::default::Default for Config {
     fn default() -> Self {
         Self {
             transparent: false,
+            premultiplied_alpha: false,
             absolute_offset: true,
             x: 0,
             y: 0,

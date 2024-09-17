@@ -8,12 +8,13 @@ Display images in the terminal with ease.
 >
 > - Real alpha compositing for the checkerboard background (instead of one bit
 >   transparency).
+> - Support for pre-multiplied alpha blending (new flag in `Config`).
 > - Uses Catmull-Rom for up/downscaling.
 > - Updated dependencies.
 
 `viuer` is a Rust library that makes it easy to show images in the terminal.
 It has a straightforward interface and is configured through a single struct.
-The default printing method is through lower half blocks (▄ or \u2585).
+The default printing method is through lower half blocks (`▄` or `\u2585`).
 However some custom graphics protocols are supported. They result in full
 resolution images being displayed in specific environments:
 
@@ -61,7 +62,7 @@ Or if you have a [DynamicImage](https://docs.rs/image/*/image/enum.DynamicImage.
 you can use it directly:
 
 ```rust
-// ..Config setup
+// ... `Config` setup
 
 let img = image::DynamicImage::ImageRgba8(image::RgbaImage::new(20, 10));
 viuer::print(&img, &conf).expect("Image printing failed.");

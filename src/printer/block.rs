@@ -152,6 +152,7 @@ fn is_pixel_transparent(pixel: (u32, u32, &Rgba<u8>)) -> bool {
     pixel.2[3] == 0
 }
 
+#[inline(always)]
 fn checkerboard(row: u32, col: u32) -> (u8, u8, u8) {
     if row % 2 == col % 2 {
         CHECKERBOARD_BACKGROUND_DARK
@@ -160,6 +161,7 @@ fn checkerboard(row: u32, col: u32) -> (u8, u8, u8) {
     }
 }
 
+#[inline(always)]
 fn transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
     //imitate the transparent chess board pattern
     let rgb = checkerboard(row, col);
@@ -170,22 +172,46 @@ fn transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
     }
 }
 
-fn mix(a: u8, b: u8, alpha: u8) -> u8 {
-    ((a as u16 * alpha as u16 + b as u16 * (255u16 - alpha as u16)) / 255) as _
+/// Composes the foreground over the background.
+///
+/// This assumes unpremultiplied alpha.
+#[inline(always)]
+fn over(fg: u8, bg: u8, alpha: u8) -> u8 {
+    ((fg as u16 * alpha as u16 + bg as u16 * (255u16 - alpha as u16)) / 255) as _
 }
 
+/// Composes the foreground over the background.
+///
+/// This assumes premultiplied alpha (standard Porter-Duff compositing).
+#[inline(always)]
+fn over_porter_duff(fg: u8, bg: u8, alpha: u8) -> u8 {
+    ((fg as u16 + bg as u16 * (255u16 - alpha as u16)) / 255) as _
+}
+
+#[inline(always)]
 fn color_from_pixel(row: u32, pixel: (u32, u32, &Rgba<u8>), config: &Config) -> Color {
-    let col = pixel.0;
-    // We need to blend the pixel's color with the checkerboard pattern.
-    let rgb = if !config.transparent && pixel.2[3] < 255 {
-        (
-            mix(pixel.2[0], checkerboard(row, col).0, pixel.2[3]),
-            mix(pixel.2[1], checkerboard(row, col).1, pixel.2[3]),
-            mix(pixel.2[2], checkerboard(row, col).2, pixel.2[3]),
-        )
+    let (col, _y, color) = pixel;
+    let alpha = color[3];
+
+    let rgb = if !config.transparent && alpha < 255 {
+        // We need to blend the pixel's color with the checkerboard pattern.
+        let checker = checkerboard(row, col);
+
+        if config.premultiplied_alpha {
+            (
+                over_porter_duff(color[0], checker.0, alpha),
+                over_porter_duff(color[1], checker.1, alpha),
+                over_porter_duff(color[2], checker.2, alpha),
+            )
+        } else {
+            (
+                over(color[0], checker.0, alpha),
+                over(color[1], checker.1, alpha),
+                over(color[2], checker.2, alpha),
+            )
+        }
     } else {
-        let (_x, _y, data) = pixel;
-        (data[0], data[1], data[2])
+        (color[0], color[1], color[2])
     };
 
     if config.truecolor {
