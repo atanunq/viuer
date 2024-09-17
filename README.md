@@ -1,15 +1,15 @@
 # `viuer`
 
+![ci](https://github.com/atanunq/viuer/workflows/ci/badge.svg)
+
 Display images in the terminal with ease.
 
 > This clone of the original repository has the following changes:
 >
 > - Real alpha compositing for the checkerboard background (instead of one bit
->   transparency)
+>   transparency).
 > - Uses Catmull-Rom for up/downscaling.
 > - Updated dependencies.
-
-![ci](https://github.com/atanunq/viuer/workflows/ci/badge.svg)
 
 `viuer` is a Rust library that makes it easy to show images in the terminal.
 It has a straightforward interface and is configured through a single struct.
@@ -18,10 +18,8 @@ However some custom graphics protocols are supported. They result in full
 resolution images being displayed in specific environments:
 
 - [Kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
-
 - [iTerm](https://iterm2.com/documentation-images.html)
-
-- [Sixel](https://github.com/saitoha/libsixel) (behind the "sixel"
+- [Sixel](https://github.com/saitoha/libsixel) (behind the `sixel`
   feature gate)
 
 ## Usage
@@ -39,23 +37,22 @@ For a demo of the library's usage and example screenshots, see
 ## Examples
 
 ```rust
-// src/main.rs
 use viuer::{print_from_file, Config};
 
 fn main() {
     let conf = Config {
-        // set offset
+        // Set offset.
         x: 20,
         y: 4,
-        // set dimensions
+        // Set dimensions.
         width: Some(80),
         height: Some(25),
         ..Default::default()
     };
 
-    // starting from row 4 and column 20,
-    // display `img.jpg` with dimensions 80x25 (in terminal cells)
-    // note that the actual resolution in the terminal will be 80x50
+    // Starting from row 4 and column 20,
+    // display `img.jpg` with dimensions 80×25 (in terminal cells).
+    // Note that the actual resolution in the terminal will be 80×50.
     print_from_file("img.jpg", &conf).expect("Image printing failed.");
 }
 ```
