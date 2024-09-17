@@ -1,27 +1,40 @@
-# viuer
+# `viuer`
+
 Display images in the terminal with ease.
+
+> This clone of the original repository has the following changes:
+>
+> - Real alpha compositing for the checkerboard background (instead of one bit
+>   transparency)
+> - Uses Catmull-Rom for up/downscaling.
+> - Updated dependencies.
 
 ![ci](https://github.com/atanunq/viuer/workflows/ci/badge.svg)
 
-`viuer` is a Rust library that makes it easy to show images in the
-terminal. It has a straightforward interface and is configured
-through a single struct. The default printing method is through
-lower half blocks (▄ or \u2585). However some custom graphics
-protocols are supported. They result in full resolution images
-being displayed in specific environments:
+`viuer` is a Rust library that makes it easy to show images in the terminal.
+It has a straightforward interface and is configured through a single struct.
+The default printing method is through lower half blocks (▄ or \u2585).
+However some custom graphics protocols are supported. They result in full
+resolution images being displayed in specific environments:
 
 - [Kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
+
 - [iTerm](https://iterm2.com/documentation-images.html)
-- [Sixel](https://github.com/saitoha/libsixel) (behind the "sixel" feature gate)
+
+- [Sixel](https://github.com/saitoha/libsixel) (behind the "sixel"
+  feature gate)
 
 ## Usage
+
 Add this to `Cargo.toml`:
+
 ```toml
 [dependencies]
-viuer = "0.6"
+viuer = "0.7"
 ```
 
-For a demo of the library's usage and example screenshots, see [`viu`](https://github.com/atanunq/viu).
+For a demo of the library's usage and example screenshots, see
+[`viu`](https://github.com/atanunq/viu).
 
 ## Examples
 
@@ -47,7 +60,9 @@ fn main() {
 }
 ```
 
-Or if you have a [DynamicImage](https://docs.rs/image/*/image/enum.DynamicImage.html), you can use it directly:
+Or if you have a [DynamicImage](https://docs.rs/image/*/image/enum.DynamicImage.html),
+you can use it directly:
+
 ```rust
 // ..Config setup
 
@@ -56,4 +71,6 @@ viuer::print(&img, &conf).expect("Image printing failed.");
 ```
 
 ## Docs
-Check the [full documentation](https://docs.rs/crate/viuer) for examples and all the configuration options.
+
+Check the [full documentation](https://docs.rs/crate/viuer) for examples and all
+the configuration options.
