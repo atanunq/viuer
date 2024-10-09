@@ -17,7 +17,10 @@ ansi_colours = "1"
 base64 = "0.22"
 console = { version = "0.15", default-features = false }
 crossterm = "0.28"
-image = "0.25"
+image = { version = "0.25", default-features = false, features = [
+    "rayon",
+    "png",
+] }
 lazy_static = "1.5"
 tempfile = "3"
 termcolor = "1"

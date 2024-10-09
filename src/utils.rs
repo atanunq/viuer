@@ -40,7 +40,7 @@ pub fn terminal_size() -> (u16, u16) {
     }
 }
 
-// Return a constant when running the tests
+/// Returns a constant and only used when running the tests.
 #[cfg(test)]
 pub fn terminal_size() -> (u16, u16) {
     DEFAULT_TERM_SIZE
