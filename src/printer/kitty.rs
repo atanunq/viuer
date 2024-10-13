@@ -58,12 +58,12 @@ pub enum KittySupport {
 // Check if Kitty protocol can be used
 fn check_kitty_support() -> KittySupport {
     if let Ok(term) = std::env::var("TERM") {
-        if term.contains("kitty") {
+        if term.contains("kitty") || term.contains("ghostty") {
             if has_local_support().is_ok() {
                 return KittySupport::Local;
-            } else {
-                return KittySupport::Remote;
             }
+
+            return KittySupport::Remote;
         }
     }
     KittySupport::None
