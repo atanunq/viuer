@@ -1,6 +1,6 @@
 [package]
 name = "viuer"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Atanas Yankov <atanas.yankov98@gmail.com>"]
 edition = "2021"
 description = "Display images in the terminal"
@@ -17,10 +17,7 @@ ansi_colours = "1"
 base64 = "0.22"
 console = { version = "0.15", default-features = false }
 crossterm = { version = "0.28", default-features = false }
-image = { version = "0.25", default-features = false, features = [
-    "rayon",
-    "png",
-] }
+image = "0.25"
 lazy_static = "1.5"
 tempfile = "3"
 termcolor = "1"

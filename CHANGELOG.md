@@ -1,3 +1,6 @@
+## 0.8.1
+- Revert removed `image` features
+
 ## 0.8.0
 - Remove unneeded features and update dependencies
 - Use Catmull-Rom for up/downscaling
