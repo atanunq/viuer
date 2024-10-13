@@ -1,3 +1,8 @@
+## Unreleased
+- Remove unneeded features and update dependencies
+- Use Catmull-Rom for up/downscaling
+- Add `premultiplied_alpha` Config option
+
 ## 0.7.1
 - Bump `base64` and `crossterm` dependencies
 

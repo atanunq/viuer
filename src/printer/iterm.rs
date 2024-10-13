@@ -36,7 +36,7 @@ impl Printer for iTermPrinter {
             img.as_bytes(),
             width,
             height,
-            img.color(),
+            img.color().into(),
         )?;
 
         print_buffer(stdout, img, &png_bytes[..], config)
