@@ -1,4 +1,4 @@
-## Unreleased
+## 0.8.0
 - Remove unneeded features and update dependencies
 - Use Catmull-Rom for up/downscaling
 - Add `premultiplied_alpha` Config option
