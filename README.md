@@ -4,14 +4,6 @@
 
 Display images in the terminal with ease.
 
-> This clone of the original repository has the following changes:
->
-> - Real alpha compositing for the checkerboard background (instead of one bit
->   transparency).
-> - Support for pre-multiplied alpha blending (new flag in `Config`).
-> - Uses Catmull-Rom for up/downscaling.
-> - Updated dependencies.
-
 `viuer` is a Rust library that makes it easy to show images in the terminal.
 It has a straightforward interface and is configured through a single struct.
 The default printing method is through lower half blocks (`▄` or `\u2585`).
@@ -29,7 +21,7 @@ Add this to `Cargo.toml`:
 
 ```toml
 [dependencies]
-viuer = "0.7"
+viuer = "0.8"
 ```
 
 For a demo of the library's usage and example screenshots, see

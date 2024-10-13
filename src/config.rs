@@ -7,11 +7,11 @@ pub struct Config {
     pub transparent: bool,
     /// If we assume the alpha channel is premultiplied for blending with the
     /// checkerboard background.
-    /// Defaults to true.
+    /// Defaults to false.
     pub premultiplied_alpha: bool,
     /// Make the x and y offset be relative to the top left terminal corner.
     /// If false, the y offset is relative to the cursor's position.
-    /// Defaults to false.
+    /// Defaults to true.
     pub absolute_offset: bool,
     /// X offset. Defaults to 0.
     pub x: u16,
