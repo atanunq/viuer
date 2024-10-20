@@ -1,6 +1,6 @@
 # `viuer`
 
-![ci](https://github.com/atanunq/viuer/workflows/ci/badge.svg)
+![ci](https://github.com/atanunq/viuer/actions/workflows/ci.yml/badge.svg)
 
 Display images in the terminal with ease.
 
@@ -15,52 +15,43 @@ resolution images being displayed in specific environments:
 - [Sixel](https://github.com/saitoha/libsixel) (behind the `sixel`
   feature gate)
 
+For a demo of the library's usage and example screenshots, see
+[`viu`](https://github.com/atanunq/viu?tab=readme-ov-file#examples).
+
 ## Usage
 
-Add this to `Cargo.toml`:
+With the default features, only [image::DynamicImage](https://docs.rs/image/latest/image/enum.DynamicImage.html) can be printed:
 
-```toml
-[dependencies]
-viuer = "0.8"
+```rust
+use viuer::{print, Config};
+
+let conf = Config {
+    // Start from row 4 and column 20.
+    x: 20,
+    y: 4,
+    ..Default::default()
+};
+
+let img = image::DynamicImage::ImageRgba8(image::RgbaImage::new(20, 10));
+print(&img, &conf).expect("Image printing failed.");
 ```
 
-For a demo of the library's usage and example screenshots, see
-[`viu`](https://github.com/atanunq/viu).
-
-## Examples
-
+And with the `print-file` feature, `viuer` can work with files, too:
 ```rust
 use viuer::{print_from_file, Config};
 
-fn main() {
-    let conf = Config {
-        // Set offset.
-        x: 20,
-        y: 4,
-        // Set dimensions.
-        width: Some(80),
-        height: Some(25),
-        ..Default::default()
-    };
+let conf = Config {
+    // Set dimensions.
+    width: Some(80),
+    height: Some(25),
+    ..Default::default()
+};
 
-    // Starting from row 4 and column 20,
-    // display `img.jpg` with dimensions 80×25 (in terminal cells).
-    // Note that the actual resolution in the terminal will be 80×50.
-    print_from_file("img.jpg", &conf).expect("Image printing failed.");
-}
-```
-
-Or if you have a [DynamicImage](https://docs.rs/image/*/image/enum.DynamicImage.html),
-you can use it directly:
-
-```rust
-// ... `Config` setup
-
-let img = image::DynamicImage::ImageRgba8(image::RgbaImage::new(20, 10));
-viuer::print(&img, &conf).expect("Image printing failed.");
+// Display `img.jpg` with dimensions 80×25 in terminal cells.
+// The image resolution will be 80×50 because each cell contains two pixels.
+print_from_file("img.jpg", &conf).expect("Image printing failed.");
 ```
 
 ## Docs
 
-Check the [full documentation](https://docs.rs/crate/viuer) for examples and all
-the configuration options.
+Find all the configuration options in the [full documentation](https://docs.rs/viuer/latest/viuer/).

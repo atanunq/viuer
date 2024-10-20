@@ -13,7 +13,7 @@ jobs:
       matrix:
         os: [windows-latest, macOS-latest]
     steps:
-    - uses: hecrj/setup-rust-action@v1
+    - uses: hecrj/setup-rust-action@v2
       with:
         rust-version: stable
         components: clippy, rustfmt
@@ -30,7 +30,7 @@ jobs:
   build-ubuntu:
     runs-on: "ubuntu-latest"
     steps:
-    - uses: hecrj/setup-rust-action@v1
+    - uses: hecrj/setup-rust-action@v2
       with:
         rust-version: stable
         components: clippy, rustfmt
