@@ -1,6 +1,6 @@
 [package]
 name = "viuer"
-version = "0.8.1"
+version = "0.9.0"
 authors = ["Atanas Yankov <atanas.yankov98@gmail.com>"]
 edition = "2021"
 description = "Display images in the terminal"
