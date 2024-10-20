@@ -4,7 +4,10 @@ use crate::utils::terminal_size;
 use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
 use crossterm::execute;
 use image::{DynamicImage, GenericImageView};
-use std::{io::Write, path::Path};
+use std::io::Write;
+
+#[cfg(feature = "print-file")]
+use std::path::Path;
 
 mod block;
 pub use block::BlockPrinter;
@@ -30,6 +33,8 @@ pub trait Printer {
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)>;
+
+    #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
@@ -68,6 +73,7 @@ impl Printer for PrinterType {
         }
     }
 
+    #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,

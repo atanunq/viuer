@@ -1,3 +1,7 @@
+## Unreleased
+- Remove `image` default features
+- Put `print_from_file` befind the new `print-file` feature flag
+
 ## 0.8.1
 - Revert removed `image` features
 

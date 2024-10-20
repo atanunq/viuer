@@ -17,20 +17,16 @@ ansi_colours = "1"
 base64 = "0.22"
 console = { version = "0.15", default-features = false }
 crossterm = { version = "0.28", default-features = false }
-image = "0.25"
+image = { version = "0.25", default-features = false, features = ["png"] }
 lazy_static = "1.5"
 tempfile = "3"
 termcolor = "1"
-
-[dependencies.sixel-rs]
-version = "0.3"
-optional = true
+sixel-rs = { version = "0.3", optional = true}
 
 [target.'cfg(windows)'.dependencies]
-crossterm = { version = "0.28", default-features = false, features = [
-    "windows",
-] }
+crossterm = { version = "0.28", default-features = false, features = ["windows"]}
 
 [features]
 default = []
 sixel = ["sixel-rs"]
+print-file = ["image/default-formats"] # Hide file printing behind a flag because it adds heavy dependencies.
