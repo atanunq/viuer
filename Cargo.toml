@@ -1,6 +1,6 @@
 [package]
 name = "viuer"
-version = "0.9.0"
+version = "0.9.1"
 authors = ["Atanas Yankov <atanas.yankov98@gmail.com>"]
 edition = "2021"
 description = "Display images in the terminal"
@@ -30,3 +30,8 @@ crossterm = { version = "0.28", default-features = false, features = ["windows"]
 default = []
 sixel = ["sixel-rs"]
 print-file = ["image/default-formats"] # Hide file printing behind a flag because it adds heavy dependencies.
+
+
+[package.metadata.docs.rs]
+# Show all methods in the documentation, even the non-default ones.
+all-features = true

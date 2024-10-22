@@ -1,3 +1,6 @@
+## 0.9.1
+- Add docs.rs metadata
+
 ## 0.9.0
 - Remove `image` default features
 - Put `print_from_file` behind the new `print-file` feature flag
