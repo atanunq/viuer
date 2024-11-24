@@ -2,7 +2,7 @@ use image::{GenericImage, ImageBuffer, Pixel, Rgba, RgbaImage, SubImage};
 use image::ColorType::Rgba8;
 use termcolor::Color;
 use crate::Config;
-use crate::printer::block::{get_transparency_color, is_pixel_transparent, CHECKERBOARD_BACKGROUND_DARK, CHECKERBOARD_BACKGROUND_LIGHT};
+use crate::printer::block::{CHECKERBOARD_BACKGROUND_DARK, CHECKERBOARD_BACKGROUND_LIGHT};
 use crate::printer::block::maskers::{CharMasker, Masker};
 
 pub const SUBPIXEL64_ROWS: u32 = 16;
