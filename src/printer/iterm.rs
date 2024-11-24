@@ -4,8 +4,11 @@ use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, GenericImageView, ImageEncoder};
 use lazy_static::lazy_static;
+use std::io::Write;
+
+#[cfg(feature = "print-file")]
 use std::{
-    io::{BufReader, Read, Write},
+    io::{BufReader, Read},
     path::Path,
 };
 
@@ -36,12 +39,13 @@ impl Printer for iTermPrinter {
             img.as_bytes(),
             width,
             height,
-            img.color(),
+            img.color().into(),
         )?;
 
         print_buffer(stdout, img, &png_bytes[..], config)
     }
 
+    #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,

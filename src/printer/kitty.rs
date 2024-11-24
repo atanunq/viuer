@@ -6,6 +6,7 @@ use console::{Key, Term};
 use lazy_static::lazy_static;
 use std::io::Write;
 use std::io::{Error, ErrorKind};
+use tempfile::NamedTempFile;
 
 pub struct KittyPrinter;
 
@@ -58,12 +59,12 @@ pub enum KittySupport {
 // Check if Kitty protocol can be used
 fn check_kitty_support() -> KittySupport {
     if let Ok(term) = std::env::var("TERM") {
-        if term.contains("kitty") {
+        if term.contains("kitty") || term.contains("ghostty") {
             if has_local_support().is_ok() {
                 return KittySupport::Local;
-            } else {
-                return KittySupport::Remote;
             }
+
+            return KittySupport::Remote;
         }
     }
     KittySupport::None
@@ -74,15 +75,14 @@ fn has_local_support() -> ViuResult {
     // create a temp file that will hold a 1x1 image
     let x = image::RgbaImage::new(1, 1);
     let raw_img = x.as_raw();
-    let path = store_in_tmp_file(raw_img)?;
+    let temp_file = store_in_tmp_file(raw_img)?;
 
     // send the query
     print!(
-        // t=t tells Kitty it's reading from a temp file and will delete if afterwards
+        // t=t tells Kitty it's reading from a temp file and will attempt to delete if afterwards
         "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
-        general_purpose::STANDARD.encode(path.to_str().ok_or_else(|| std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Could not convert path to &str"
+        general_purpose::STANDARD.encode(temp_file.path().to_str().ok_or_else(|| ViuError::Io(
+            Error::new(ErrorKind::Other, "Could not convert path to &str")
         ))?)
     );
     std::io::stdout().flush()?;
@@ -91,7 +91,6 @@ fn has_local_support() -> ViuResult {
     let term = Term::stdout();
     let mut response = Vec::new();
 
-    // TODO: could use a queue of length 3
     while let Ok(key) = term.read_key() {
         // The response will end with Esc('x1b'), followed by Backslash('\').
         // Also, break if the Unknown key is found, which is returned when we're not in a tty
@@ -101,6 +100,9 @@ fn has_local_support() -> ViuResult {
             break;
         }
     }
+
+    // Explicitly clean up when finished with the file because destructor, OS and Kitty are not deterministic.
+    temp_file.close()?;
 
     // Kitty response should end with these 3 Keys if it was successful
     let expected = [
@@ -125,7 +127,7 @@ fn print_local(
 ) -> ViuResult<(u32, u32)> {
     let rgba = img.to_rgba8();
     let raw_img = rgba.as_raw();
-    let path = store_in_tmp_file(raw_img)?;
+    let temp_file = store_in_tmp_file(raw_img)?;
 
     adjust_offset(stdout, config)?;
 
@@ -139,13 +141,15 @@ fn print_local(
         img.height(),
         w,
         h,
-        general_purpose::STANDARD.encode(path.to_str().ok_or_else(|| ViuError::Io(Error::new(
-            ErrorKind::Other,
-            "Could not convert path to &str"
-        )))?)
+        general_purpose::STANDARD.encode(temp_file.path().to_str().ok_or_else(|| ViuError::Io(
+            Error::new(ErrorKind::Other, "Could not convert path to &str")
+        ))?)
     )?;
     writeln!(stdout)?;
     stdout.flush()?;
+
+    // Explicitly clean up when finished with the file because destructor, OS and Kitty are not deterministic.
+    temp_file.close()?;
 
     Ok((w, h))
 }
@@ -191,18 +195,16 @@ fn print_remote(
 }
 
 // Create a file in temporary dir and write the byte slice to it.
-fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<std::path::PathBuf, ViuError> {
-    let (mut tmpfile, path) = tempfile::Builder::new()
+// The NamedTempFile will be deleted once it goes out of scope.
+fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<NamedTempFile, ViuError> {
+    let mut tmpfile = tempfile::Builder::new()
         .prefix(TEMP_FILE_PREFIX)
         .rand_bytes(1)
-        .tempfile()?
-        // Since the file is persisted, the user is responsible for deleting it afterwards. However,
-        // Kitty does this automatically after printing from a temp file.
-        .keep()?;
+        .tempfile()?;
 
     tmpfile.write_all(buf)?;
     tmpfile.flush()?;
-    Ok(path)
+    Ok(tmpfile)
 }
 
 #[cfg(test)]

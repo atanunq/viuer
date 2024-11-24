@@ -8,13 +8,18 @@ pub struct Config {
     /// Enable using additional unicode characters to mildly improve image quality.
     /// Available only for the block printer. Defaults to true.
     pub sub_blocks: bool,
+    /// If we assume the alpha channel is premultiplied for blending with the
+    /// checkerboard background.
+    /// Defaults to false.
+    pub premultiplied_alpha: bool,
     /// Make the x and y offset be relative to the top left terminal corner.
     /// If false, the y offset is relative to the cursor's position.
     /// Defaults to true.
     pub absolute_offset: bool,
     /// X offset. Defaults to 0.
     pub x: u16,
-    /// Y offset. Can be negative only when `absolute_offset` is `false`. Defaults to 0.
+    /// Y offset. Can be negative only when `absolute_offset` is `false`.
+    /// Defaults to 0.
     pub y: i16,
     /// Take a note of cursor position before printing and restore it when finished.
     /// Defaults to false.
@@ -39,6 +44,7 @@ impl std::default::Default for Config {
         Self {
             transparent: false,
             sub_blocks: true,
+            premultiplied_alpha: false,
             absolute_offset: true,
             x: 0,
             y: 0,

@@ -4,7 +4,10 @@ use crate::utils::terminal_size;
 use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
 use crossterm::execute;
 use image::{DynamicImage, GenericImageView};
-use std::{io::Write, path::Path};
+use std::io::Write;
+
+#[cfg(feature = "print-file")]
+use std::path::Path;
 
 mod block;
 pub use block::BlockPrinter;
@@ -31,13 +34,15 @@ pub trait Printer {
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)>;
+
+    #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
-        let img = image::io::Reader::open(filename)?
+        let img = image::ImageReader::open(filename)?
             .with_guessed_format()?
             .decode()?;
         self.print(stdout, &img, config)
@@ -69,6 +74,7 @@ impl Printer for PrinterType {
         }
     }
 
+    #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
@@ -96,7 +102,7 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
     img.resize_exact(
         w,
         2 * h - img.height() % 2,
-        image::imageops::FilterType::Triangle,
+        image::imageops::FilterType::CatmullRom,
     )
 }
 

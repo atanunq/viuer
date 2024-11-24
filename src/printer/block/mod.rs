@@ -70,10 +70,14 @@ fn print_with_add_blocks(
         if config.transparent {
             None
         } else {
-            Some(get_transparency_color(row, col, config.truecolor))
+            Some(transparency_color(row, col, config.truecolor))
         }
     } else {
-        Some(get_color_from_pixel((row, col, color), config.truecolor))
+        Some(if config.truecolor {
+            Color::Rgb(color[0], color[1], color[2])
+        } else {
+            Color::Ansi256(ansi256_from_rgb((color[0], color[1], color[2])))
+        })
     };
 
     for y in (0..height).step_by(2) {
@@ -155,10 +159,10 @@ fn print_to_writecolor(
                 if config.transparent {
                     None
                 } else {
-                    Some(get_transparency_color(curr_row, pixel.0, config.truecolor))
+                    Some(transparency_color(curr_row, pixel.0, config.truecolor))
                 }
             } else {
-                Some(get_color_from_pixel(pixel, config.truecolor))
+                Some(color_from_pixel(curr_row, pixel, config))
             };
 
             // Even rows modify the background, odd rows the foreground
@@ -253,13 +257,19 @@ fn is_pixel_transparent(pixel: (u32, u32, &Rgba<u8>)) -> bool {
     pixel.2[3] == 0
 }
 
-fn get_transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
-    //imitate the transparent chess board pattern
-    let rgb = if row % 2 == col % 2 {
+#[inline(always)]
+fn checkerboard(row: u32, col: u32) -> (u8, u8, u8) {
+    if row % 2 == col % 2 {
         CHECKERBOARD_BACKGROUND_DARK
     } else {
         CHECKERBOARD_BACKGROUND_LIGHT
-    };
+    }
+}
+
+#[inline(always)]
+fn transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
+    //imitate the transparent chess board pattern
+    let rgb = checkerboard(row, col);
     if truecolor {
         Color::Rgb(rgb.0, rgb.1, rgb.2)
     } else {
@@ -267,10 +277,49 @@ fn get_transparency_color(row: u32, col: u32, truecolor: bool) -> Color {
     }
 }
 
-fn get_color_from_pixel(pixel: (u32, u32, &Rgba<u8>), truecolor: bool) -> Color {
-    let (_x, _y, data) = pixel;
-    let rgb = (data[0], data[1], data[2]);
-    if truecolor {
+/// Composes the foreground over the background.
+///
+/// This assumes unpremultiplied alpha.
+#[inline(always)]
+fn over(fg: u8, bg: u8, alpha: u8) -> u8 {
+    ((fg as u16 * alpha as u16 + bg as u16 * (255u16 - alpha as u16)) / 255) as _
+}
+
+/// Composes the foreground over the background.
+///
+/// This assumes premultiplied alpha (standard Porter-Duff compositing).
+#[inline(always)]
+fn over_porter_duff(fg: u8, bg: u8, alpha: u8) -> u8 {
+    ((fg as u16 + bg as u16 * (255u16 - alpha as u16)) / 255) as _
+}
+
+#[inline(always)]
+fn color_from_pixel(row: u32, pixel: (u32, u32, &Rgba<u8>), config: &Config) -> Color {
+    let (col, _y, color) = pixel;
+    let alpha = color[3];
+
+    let rgb = if !config.transparent && alpha < 255 {
+        // We need to blend the pixel's color with the checkerboard pattern.
+        let checker = checkerboard(row, col);
+
+        if config.premultiplied_alpha {
+            (
+                over_porter_duff(color[0], checker.0, alpha),
+                over_porter_duff(color[1], checker.1, alpha),
+                over_porter_duff(color[2], checker.2, alpha),
+            )
+        } else {
+            (
+                over(color[0], checker.0, alpha),
+                over(color[1], checker.1, alpha),
+                over(color[2], checker.2, alpha),
+            )
+        }
+    } else {
+        (color[0], color[1], color[2])
+    };
+
+    if config.truecolor {
         Color::Rgb(rgb.0, rgb.1, rgb.2)
     } else {
         Color::Ansi256(ansi256_from_rgb(rgb))

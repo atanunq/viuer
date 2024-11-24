@@ -4,28 +4,48 @@
 //!
 //! This library contains functionality extracted from the [`viu`](https://github.com/atanunq/viu) crate.
 //! It aims to provide an easy to use interface to print images in the terminal. Uses some abstractions
-//! provided by the [`image`] crate. Both the [Kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
-//! and [iTerm](https://iterm2.com/documentation-images.html) graphic protocols are supported.
-//! By default, they are used if detected. If not, `viuer` will fallback to using regular
-//! half blocks instead (▄ and ▀).
+//! provided by the [`image`] crate. [Kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol.html)
+//! and [iTerm](https://iterm2.com/documentation-images.html) graphic protocols are supported and used by default,
+//! if detected. If not, `viuer` will fallback to using regular half blocks instead (▄ and ▀).
 //!
 //! ## Basic Usage
+//! The default features of this crate can only work with [image::DynamicImage]. The below example
+//! creates a 60x60 gradient and prints it. More options are available through the [Config] struct.
+//! ```
+//! use image::{DynamicImage, Pixel, Rgba, RgbaImage};
+//!
+//! let conf = viuer::Config {
+//!     absolute_offset: false,
+//!     ..Default::default()
+//! };
+//!
+//! let mut img = DynamicImage::ImageRgba8(RgbaImage::new(60, 60));
+//! let start = Rgba::from_slice(&[0, 196, 0, 255]);
+//! let end = Rgba::from_slice(&[255, 255, 255, 255]);
+//! image::imageops::horizontal_gradient(&mut img, start, end);
+//!
+//! viuer::print(&img, &conf).unwrap();
+//! ```
+//!
+//! ## Decoding files
+//! To work directly with files, the non-default `print-file` feature must be enabled.
+//!
 //! The example below shows how to print the image `img.jpg` in 40x30 terminal cells, with vertical
-//! offset of 4 and horizontal of 10, starting from the top left corner. More options are available
-//! through the [Config] struct.
+//! offset of 4 and horizontal of 10, starting from the top left corner.
 //! ```no_run
-//! use viuer::{Config, print_from_file};
-//! let conf = Config {
+//! let conf = viuer::Config {
 //!     width: Some(40),
 //!     height: Some(30),
 //!     x: 10,
 //!     y: 4,
 //!     ..Default::default()
 //! };
-//! // will resize the image to fit in 40x30 terminal cells and print it
-//! print_from_file("img.jpg", &conf).expect("Image printing failed.");
+//!
+//! #[cfg(feature="print-file")]
+//! viuer::print_from_file("img.jpg", &conf).expect("Image printing failed.");
 //! ```
 
+#[cfg(feature = "print-file")]
 use std::path::Path;
 
 use crossterm::{
@@ -86,7 +106,8 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     Ok((w, h))
 }
 
-/// Helper method that reads a file, tries to decode it and prints it.
+/// Helper method that reads a file, tries to decode and print it. The feature is available only
+/// with the `print-file` feature.
 ///
 /// ## Example
 /// ```no_run
@@ -100,6 +121,7 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
 /// // Also, the terminal's background color will be used instead of checkerboard pattern.
 /// print_from_file("img.jpg", &conf).expect("Image printing failed.");
 /// ```
+#[cfg(feature = "print-file")]
 pub fn print_from_file<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResult<(u32, u32)> {
     let mut stdout = std::io::stdout();
     if config.restore_cursor {
