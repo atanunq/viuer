@@ -3,7 +3,7 @@
 // Any characters that could be created by inverting one of these was removed.
 // That leaves 20 in total.
 
-use crate::printer::block::masks::SUBPIXEL64_ROWS;
+use crate::printer::block::masks::{SUBPIXEL64_COLUMNS, SUBPIXEL64_ROWS};
 
 // U+2581	▁	Lower one eighth block
 const LOWER_ONE_EIGHTH_BLOCK: LabeledMasker<HorizontalMasker> = LabeledMasker('▁', HorizontalMasker(2));
@@ -46,6 +46,45 @@ const QUADRANT_UPPER_LEFT_AND_LOWER_RIGHT: LabeledMasker<XorMasker<HorizontalMas
 // U+259D	▝	Quadrant upper right
 const QUADRANT_UPPER_RIGHT: LabeledMasker<AndMasker<InvertMasker<VerticalMasker>, InvertMasker<HorizontalMasker>>> = LabeledMasker('▝', AndMasker(InvertMasker(VerticalMasker(4)), InvertMasker(HorizontalMasker(8))));
 
+// ◢◣
+const RAMP_UP: LabeledMasker<Linear> = LabeledMasker('◢', Linear(2., 0.));
+const RAMP_DOWN: LabeledMasker<Linear> = LabeledMasker('◣', Linear(1., -4.));
+
+const RAMP_1: LabeledMasker<Linear> = LabeledMasker('🭇', Linear(1., -4.));
+const RAMP_2: LabeledMasker<Linear> = LabeledMasker('🭈', Linear(0.6, 0.));
+const RAMP_3: LabeledMasker<Linear> = LabeledMasker('🭉', Linear(2., -8.));
+const RAMP_4: LabeledMasker<Linear> = LabeledMasker('🭊', Linear(1., 0.));
+const RAMP_5: LabeledMasker<Linear> = LabeledMasker('🭋', Linear(4., -16.));
+const RAMP_6: LabeledMasker<Linear> = LabeledMasker('🭆', Linear(1., 4.));
+
+/*
+'🭇' => RAMP_1.1.mask(row, column),
+'🭈' => RAMP_2.1.mask(row, column),
+'🭉' => RAMP_3.1.mask(row, column),
+'🭊' => RAMP_4.1.mask(row, column),
+'🭋' => RAMP_5.1.mask(row, column),
+'🭆' => RAMP_6.1.mask(row, column),
+// 🭇 🭈 🭉 🭊 🭋 🭆
+'🭑', RAMP_6.1.mask(row, SUBPIXEL64_COLUMNS - column),
+'🭀', RAMP_5.1.mask(row, SUBPIXEL64_COLUMNS - column),
+'🬿', RAMP_4.1.mask(row, SUBPIXEL64_COLUMNS - column),
+'🬾', RAMP_3.1.mask(row, SUBPIXEL64_COLUMNS - column),
+'🬽', RAMP_2.1.mask(row, SUBPIXEL64_COLUMNS - column),
+'🬼', RAMP_1.1.mask(row, SUBPIXEL64_COLUMNS - column),
+'🭢', RAMP_1.1.mask(SUBPIXEL64_ROWS - row, column),
+'🭣', RAMP_2.1.mask(SUBPIXEL64_ROWS - row, column),
+'🭤', RAMP_3.1.mask(SUBPIXEL64_ROWS - row, column),
+'🭥', RAMP_4.1.mask(SUBPIXEL64_ROWS - row, column),
+'🭦', RAMP_5.1.mask(SUBPIXEL64_ROWS - row, column),
+'🭧', RAMP_6.1.mask(SUBPIXEL64_ROWS - row, column),
+'🭜', RAMP_6.1.mask(SUBPIXEL64_ROWS - row, SUBPIXEL64_COLUMNS - column),
+'🭛', RAMP_5.1.mask(SUBPIXEL64_ROWS - row, SUBPIXEL64_COLUMNS - column),
+'🭚', RAMP_4.1.mask(SUBPIXEL64_ROWS - row, SUBPIXEL64_COLUMNS - column),
+'🭙', RAMP_3.1.mask(SUBPIXEL64_ROWS - row, SUBPIXEL64_COLUMNS - column),
+'🭘', RAMP_2.1.mask(SUBPIXEL64_ROWS - row, SUBPIXEL64_COLUMNS - column),
+'🭗', RAMP_1.1.mask(SUBPIXEL64_ROWS - row, SUBPIXEL64_COLUMNS - column),
+ */
+
 // Now, instead of considering a 1x2 block at a time, we actually need to consider
 // a 8x16 block.
 // If 1 pixel is an 8x8, then we have 64 subpixels.
@@ -60,7 +99,7 @@ pub trait Masker {
 
 pub struct CharMasker(pub char);
 
-struct LabeledMasker<M: ?Sized + Masker>(pub char, M);
+struct LabeledMasker<M: ?Sized + Masker>(pub char, pub(crate) M);
 
 struct FullMasker;
 
@@ -72,9 +111,11 @@ struct XorMasker<S: Masker, T: Masker>(S, T); // join 2 maskers together with NA
 struct AndMasker<S: Masker, T: Masker>(S, T); // join 2 maskers together with AND
 struct OrMasker<S: Masker, T: Masker>(S, T); // join 2 maskers together, keeping all parts
 
+struct Linear(f32, f32); // (m, b) => true if y >= mx + b
+
 impl Masker for CharMasker {
     fn mask(&self, row: usize, column: usize) -> bool {
-        match (self.0) {
+        match self.0 {
             '▁' => LOWER_ONE_EIGHTH_BLOCK.1.mask(row, column),
             '▂' => LOWER_ONE_QUARTER_BLOCK.1.mask(row, column),
             '▃' => LOWER_THREE_EIGHTHS_BLOCK.1.mask(row, column),
@@ -95,6 +136,32 @@ impl Masker for CharMasker {
             '▘' => QUADRANT_UPPER_LEFT.1.mask(row, column),
             '▚' => QUADRANT_UPPER_LEFT_AND_LOWER_RIGHT.1.mask(row, column),
             '▝' => QUADRANT_UPPER_RIGHT.1.mask(row, column),
+            '🭇' => RAMP_1.1.mask(row, column),
+            '🭈' => RAMP_2.1.mask(row, column),
+            '🭉' => RAMP_3.1.mask(row, column),
+            '🭊' => RAMP_4.1.mask(row, column),
+            '🭋' => RAMP_5.1.mask(row, column),
+            '🭆' => RAMP_6.1.mask(row, column),
+            '◢' => RAMP_UP.1.mask(row, column),
+            '◣' => RAMP_DOWN.1.mask(row, column),
+            '🭑' => RAMP_6.1.mask(row, SUBPIXEL64_COLUMNS as usize - column),
+            '🭀' => RAMP_5.1.mask(row, SUBPIXEL64_COLUMNS as usize - column),
+            '🬿' => RAMP_4.1.mask(row, SUBPIXEL64_COLUMNS as usize - column),
+            '🬾' => RAMP_3.1.mask(row, SUBPIXEL64_COLUMNS as usize - column),
+            '🬽' => RAMP_2.1.mask(row, SUBPIXEL64_COLUMNS as usize - column),
+            '🬼' => RAMP_1.1.mask(row, SUBPIXEL64_COLUMNS as usize - column),
+            '🭢' => RAMP_1.1.mask(SUBPIXEL64_ROWS as usize - row, column),
+            '🭣' => RAMP_2.1.mask(SUBPIXEL64_ROWS as usize - row, column),
+            '🭤' => RAMP_3.1.mask(SUBPIXEL64_ROWS as usize - row, column),
+            '🭥' => RAMP_4.1.mask(SUBPIXEL64_ROWS as usize - row, column),
+            '🭦' => RAMP_5.1.mask(SUBPIXEL64_ROWS as usize - row, column),
+            '🭧' => RAMP_6.1.mask(SUBPIXEL64_ROWS as usize - row, column),
+            '🭜' => RAMP_6.1.mask(SUBPIXEL64_ROWS as usize - row, SUBPIXEL64_COLUMNS as usize - column),
+            '🭛' => RAMP_5.1.mask(SUBPIXEL64_ROWS as usize - row, SUBPIXEL64_COLUMNS as usize - column),
+            '🭚' => RAMP_4.1.mask(SUBPIXEL64_ROWS as usize - row, SUBPIXEL64_COLUMNS as usize - column),
+            '🭙' => RAMP_3.1.mask(SUBPIXEL64_ROWS as usize - row, SUBPIXEL64_COLUMNS as usize - column),
+            '🭘' => RAMP_2.1.mask(SUBPIXEL64_ROWS as usize - row, SUBPIXEL64_COLUMNS as usize - column),
+            '🭗' => RAMP_1.1.mask(SUBPIXEL64_ROWS as usize - row, SUBPIXEL64_COLUMNS as usize - column),
             _ => panic!("Unknown character '{}'", self.0)
         }
     }
@@ -125,7 +192,13 @@ impl Masker for VerticalMasker {
 
 impl Masker for HorizontalMasker {
     fn mask(&self, row: usize, column: usize) -> bool {
-        (SUBPIXEL64_ROWS - row - 1) < self.0
+        (SUBPIXEL64_ROWS as usize - row - 1) < self.0
+    }
+}
+
+impl Masker for Linear {
+    fn mask(&self, row: usize, column: usize) -> bool {
+        ((SUBPIXEL64_ROWS as usize - row) as f32) <= (column as f32 * self.0 + self.1)
     }
 }
 

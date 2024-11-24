@@ -5,6 +5,9 @@ pub struct Config {
     /// Enable true transparency instead of checkerboard background.
     /// Available only for the block printer. Defaults to false.
     pub transparent: bool,
+    /// Enable using additional unicode characters to mildly improve image quality.
+    /// Available only for the block printer. Defaults to true.
+    pub sub_blocks: bool,
     /// Make the x and y offset be relative to the top left terminal corner.
     /// If false, the y offset is relative to the cursor's position.
     /// Defaults to true.
@@ -35,6 +38,7 @@ impl std::default::Default for Config {
     fn default() -> Self {
         Self {
             transparent: false,
+            sub_blocks: true,
             absolute_offset: true,
             x: 0,
             y: 0,

@@ -12,7 +12,7 @@ use termcolor::{BufferedStandardStream, Color, ColorChoice, ColorSpec, WriteColo
 
 use crossterm::cursor::MoveRight;
 use crossterm::execute;
-use crate::printer::block::masks::{get_all_masks, SUBPIXEL64, SUBPIXEL64_COLUMNS, SUBPIXEL64_ROWS};
+use crate::printer::block::masks::{choose_mask_and_colors, get_all_masks, SUBPIXEL64_COLUMNS, SUBPIXEL64_ROWS};
 
 
 const UPPER_HALF_BLOCK: &str = "\u{2580}";
@@ -34,7 +34,11 @@ impl Printer for BlockPrinter {
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         let mut stream = BufferedStandardStream::stdout(ColorChoice::Always);
-        print_with_add_blocks(&mut stream, img, config)
+        if config.sub_blocks {
+            print_with_add_blocks(&mut stream, img, config)
+        } else {
+            print_to_writecolor(&mut stream, img, config)
+        }
     }
 }
 
@@ -45,13 +49,13 @@ fn print_with_add_blocks(
 ) -> ViuResult<(u32, u32)> {
 
     // resize the image so that it fits in the constraints, if any
-    let img8 = super::resize2(img, config.width, config.height);
+    let img8 = super::resize8(img, config.width, config.height);
     let (s_width, s_height) = img8.dimensions();
 
     let img1 = super::resize(img, config.width, config.height);
     let (width, height) = img1.dimensions();
 
-    if (s_width, s_height) != (width * SUBPIXEL64 as u32, height * SUBPIXEL64 as u32) {
+    if (s_width, s_height) != (width * SUBPIXEL64_COLUMNS, height * SUBPIXEL64_COLUMNS) {
         panic!("unable to scale image properly");
         // return print_to_writecolor(stdout, img, config);
     }
@@ -62,52 +66,58 @@ fn print_with_add_blocks(
     let img1_buffer = img1.to_rgba8();
     let img8_buffer = img8.to_rgba8();
 
-    let masks = masks::get_all_masks();
-    // 1. preprocess image: determine which characters w/ which colors need to be printed
-    let print_img = vec![vec![(' ', ColorSpec::new()); width as usize]; height as usize];
-    for y in 0..height {
-        let is_even_row = y % 2 == 0;
+    let get_color = |(row,col,color)| if is_pixel_transparent((row,col,color)) {
+        if config.transparent {
+            None
+        } else {
+            Some(get_transparency_color(row, col, config.truecolor))
+        }
+    } else {
+        Some(get_color_from_pixel((row, col, color), config.truecolor))
+    };
+
+    for y in (0..height).step_by(2) {
         let is_last_row = y == height - 1;
-        if config.x > 0 && (!is_even_row || is_last_row) {
+        if config.x > 0 {
             execute!(stdout, MoveRight(config.x))?;
         }
         for x in 0..width {
-            if y % 2 == 0 && y < height - 1 { continue }
-
-            // for debugging
-            if y == height - 1 { continue }
-
-            let subpixel_img = img8_buffer
-                .view(x * SUBPIXEL64 as u32, y * SUBPIXEL64 as u32, SUBPIXEL64_COLUMNS as u32, SUBPIXEL64_ROWS as u32)
-                .to_image();
-            let mut selected = None;
-            let mut selected_score = -1.0;
-            for mask in &masks {
-                if let Some((score, c1, c2)) = masks::get_mask_colors(&subpixel_img, &mask) {
-                    if selected_score < 0. || selected_score > score {
-                        selected = Some(((c1, c2), mask));
-                        selected_score = score;
+            let mut write_default = true;
+            if !is_last_row {
+                if let Some((mask, fg_col, bg_col)) = choose_mask_and_colors((x * SUBPIXEL64_COLUMNS, y * SUBPIXEL64_COLUMNS), &img8_buffer, config) {
+                    let mut colorspec = ColorSpec::new();
+                    match (fg_col, bg_col) {
+                        (None, Some(bg)) => {
+                            colorspec.set_fg(Some(bg));
+                            colorspec.set_bg(None);
+                        }
+                        _ => {
+                            colorspec.set_bg(bg_col);
+                            colorspec.set_fg(fg_col);
+                        }
                     }
+                    write_custom_colored_character(stdout, &colorspec, is_last_row, mask.char)?;
+                    write_default = false;
                 }
             }
-            if let Some(((fg_col, bg_col), mask)) = selected {
-                let mut colorspec = ColorSpec::new();
-                colorspec.set_bg(Some(Color::Rgb(bg_col[0], bg_col[1], bg_col[2])));
-                colorspec.set_fg(Some(Color::Rgb(fg_col[0], fg_col[1], fg_col[2])));
-                write_custom_colored_character(stdout, &colorspec, y == height - 1, mask.char)?;
-            } else {
-                let mut colorspec = ColorSpec::new();
-                let top = img1_buffer.get_pixel(x, y);
-                let bottom = img1_buffer.get_pixel(x, y + 1);
-                colorspec.set_bg(Some(Color::Rgb(top[0], top[1], top[2])));
-                colorspec.set_fg(Some(Color::Rgb(bottom[0], bottom[1], bottom[2])));
-                write_colored_character(stdout, &colorspec, y == height - 1)?;
+            if write_default {
+                if is_last_row {
+                    let mut colorspec = ColorSpec::new();
+                    let top = img1_buffer.get_pixel(x, y);
+                    colorspec.set_bg(get_color((y, x, top)));
+                    write_colored_character(stdout, &colorspec, is_last_row)?;
+                } else {
+                    let mut colorspec = ColorSpec::new();
+                    let top = img1_buffer.get_pixel(x, y);
+                    let bottom = img1_buffer.get_pixel(x, y + 1);
+                    colorspec.set_bg(get_color((y, x, top)));
+                    colorspec.set_fg(get_color((y, x, bottom)));
+                    write_colored_character(stdout, &colorspec, is_last_row)?;
+                }
             }
         }
-        if !is_even_row && !is_last_row {
-            stdout.reset()?;
-            writeln!(stdout, "\r")?;
-        }
+        stdout.reset()?;
+        writeln!(stdout, "\r")?;
     }
     stdout.reset()?;
     writeln!(stdout)?;
@@ -269,10 +279,9 @@ fn get_color_from_pixel(pixel: (u32, u32, &Rgba<u8>), truecolor: bool) -> Color 
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
     use super::*;
     use termcolor::{Ansi, Color};
-    use crate::print_from_file;
-
     // Note: truecolor is not supported in CI. Hence, it should be disabled when writing the tests
 
     #[test]
@@ -420,15 +429,18 @@ mod tests {
     // cargo test --color=always --package viuer --lib printer::block::tests --no-fail-fast
     #[test]
     fn test_write_img() {
-        let conf = Config {
-            // set offset
-            x: 0,
-            y: 0,
-            // set dimensions
-            width: Some(40),
-            height: Some(20),
+        let make_conf = |x, y, width, height, sub_blocks: bool, t: bool| Config {
+            x, y, sub_blocks, transparent: t,
+            width: Some(width), height: Some(height),
             ..Default::default()
         };
-        print_from_file("pancake.jpg", &conf).expect("Image printing failed.");
+        let a_conf = make_conf(0, 0, 80, 40, false, false);
+        let b_conf = make_conf(80, 0, 80, 40, true, false);
+        let img = image::io::Reader::open("Screenshot from 2024-11-24 16-01-50.png").unwrap()
+            .with_guessed_format().unwrap()
+            .decode().unwrap();
+        let mut stream = BufferedStandardStream::stdout(ColorChoice::Always);
+        BlockPrinter.print(&mut stream, &img, &a_conf).expect("Image printing failed.");
+        BlockPrinter.print(&mut stream, &img, &b_conf).expect("Image printing failed.");
     }
 }

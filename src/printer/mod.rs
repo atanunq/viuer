@@ -20,7 +20,7 @@ pub use self::sixel::{is_sixel_supported, SixelPrinter};
 mod iterm;
 pub use iterm::iTermPrinter;
 pub use iterm::is_iterm_supported;
-use crate::printer::block::masks::SUBPIXEL64;
+use crate::printer::block::masks::{SUBPIXEL64_COLUMNS};
 
 pub trait Printer {
     // Print the given image in the terminal while respecting the options in the config struct.
@@ -100,11 +100,11 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
     )
 }
 
-pub fn resize2(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
+pub fn resize8(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
     let (w, h) = find_best_fit(img, width, height);
     img.resize_exact(
-        w * SUBPIXEL64 as u32,
-        (2 * h - img.height() % 2) * SUBPIXEL64 as u32,
+        w * SUBPIXEL64_COLUMNS as u32,
+        (2 * h - img.height() % 2) * SUBPIXEL64_COLUMNS as u32,
         image::imageops::FilterType::Triangle
     )
 }
