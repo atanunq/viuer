@@ -21,7 +21,8 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 lazy_static = "1.5"
 tempfile = "3"
 termcolor = "1"
-sixel-rs = { version = "0.3", optional = true}
+sixel-rs = { version = "0.3", optional = true }
+icy_sixel = { version = "0.1", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 crossterm = { version = "0.28", default-features = false, features = ["windows"]}
@@ -29,8 +30,8 @@ crossterm = { version = "0.28", default-features = false, features = ["windows"]
 [features]
 default = []
 sixel = ["sixel-rs"]
+icy_sixel = ["dep:icy_sixel"]
 print-file = ["image/default-formats"] # Hide file printing behind a flag because it adds heavy dependencies.
-
 
 [package.metadata.docs.rs]
 # Show all methods in the documentation, even the non-default ones.
