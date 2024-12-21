@@ -5,6 +5,9 @@ pub struct Config {
     /// Enable true transparency instead of checkerboard background.
     /// Available only for the block printer. Defaults to false.
     pub transparent: bool,
+    /// Enable using additional unicode characters to mildly improve image quality.
+    /// Available only for the block printer. Defaults to true.
+    pub sub_blocks: bool,
     /// If we assume the alpha channel is premultiplied for blending with the
     /// checkerboard background.
     /// Defaults to false.
@@ -40,6 +43,7 @@ impl std::default::Default for Config {
     fn default() -> Self {
         Self {
             transparent: false,
+            sub_blocks: true,
             premultiplied_alpha: false,
             absolute_offset: true,
             x: 0,
