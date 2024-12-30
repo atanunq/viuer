@@ -25,7 +25,7 @@ impl Printer for IcySixelPrinter {
 
         adjust_offset(stdout, config)?;
 
-        let output = sixel_string(
+        match sixel_string(
             raw,
             width as i32,
             height as i32,
@@ -33,11 +33,16 @@ impl Printer for IcySixelPrinter {
             icy_sixel::DiffusionMethod::Auto,
             icy_sixel::MethodForLargest::Auto,
             icy_sixel::MethodForRep::Auto,
-            icy_sixel::Quality::AUTO)?;
-
-        write!(stdout, "{output}")?;
-        stdout.flush()?;
-
-        Ok((w, h))
+            icy_sixel::Quality::AUTO)
+        {
+            Ok(output) => {
+                write!(stdout, "{output}")?;
+                stdout.flush()?;
+                Ok((w, h))
+            },
+            Err(error) => {
+                Err(crate::ViuError::IcySixelError(format!("{error}")))
+            }
+        }
     }
 }

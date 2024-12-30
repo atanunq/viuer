@@ -21,7 +21,7 @@ pub enum ViuError {
     SixelError(sixel_rs::status::Error),
     /// Boxed generic error.
     #[cfg(feature = "icy_sixel")]
-    BoxedError(Box<dyn std::error::Error>),
+    IcySixelError(String),
 }
 
 impl std::error::Error for ViuError {}
@@ -50,13 +50,6 @@ impl From<sixel_rs::status::Error> for ViuError {
     }
 }
 
-#[cfg(feature = "icy_sixel")]
-impl From<Box<dyn std::error::Error>> for ViuError {
-    fn from(e: Box<dyn std::error::Error>) -> Self {
-        ViuError::BoxedError(e)
-    }
-}
-
 impl std::fmt::Display for ViuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -69,7 +62,7 @@ impl std::fmt::Display for ViuError {
             #[cfg(feature = "sixel")]
             ViuError::SixelError(e) => write!(f, "Sixel error: {:?}", e),
             #[cfg(feature = "icy_sixel")]
-            ViuError::BoxedError(e) => write!(f, "{:?}", e),
+            ViuError::IcySixelError(e) => write!(f, "Icy Sixel error: {:?}", e),
         }
     }
 }
