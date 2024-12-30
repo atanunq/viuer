@@ -92,12 +92,20 @@ fn print_buffer(
 // Check if the iTerm protocol can be used
 fn check_iterm_support() -> bool {
     if let Ok(term) = std::env::var("TERM_PROGRAM") {
-        if term.contains("iTerm") || term.contains("WezTerm") || term.contains("mintty") {
+        if term.contains("iTerm")
+            || term.contains("WezTerm")
+            || term.contains("mintty")
+            || term.contains("rio")
+        {
             return true;
         }
     }
     if let Ok(lc_term) = std::env::var("LC_TERMINAL") {
-        if lc_term.contains("iTerm") || lc_term.contains("WezTerm") || lc_term.contains("mintty") {
+        if lc_term.contains("iTerm")
+            || lc_term.contains("WezTerm")
+            || lc_term.contains("mintty")
+            || lc_term.contains("rio")
+        {
             return true;
         }
     }

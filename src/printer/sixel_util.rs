@@ -39,10 +39,12 @@ fn check_device_attrs() -> ViuResult<bool> {
 fn check_sixel_support() -> bool {
     if let Ok(term) = std::env::var("TERM") {
         match term.as_str() {
-            "mlterm" | "yaft-256color" | "foot" | "foot-extra" | "eat-truecolor" => return true,
+            "mlterm" | "yaft-256color" | "foot" | "foot-extra" | "eat-truecolor" | "rio" => {
+                return true;
+            },
             "st-256color" | "xterm" | "xterm-256color" => {
-                return check_device_attrs().unwrap_or(false)
-            }
+                return check_device_attrs().unwrap_or(false);
+            },
             _ => {
                 if let Ok(term_program) = std::env::var("TERM_PROGRAM") {
                     return term_program == "MacTerm";
