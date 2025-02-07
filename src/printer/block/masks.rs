@@ -40,10 +40,10 @@ pub fn get_all_masks() -> Vec<Mask> {
         .map(|cm| Mask::new(cm))
         .collect()
 }
-pub fn choose_mask_and_colors(offset: (u32, u32), img: &RgbaImage, config: &Config) -> Option<(Mask, Option<Color>, Option<Color>)> {
+pub fn choose_mask_and_colors<'a>(masks: &'a Vec<Mask>, offset: (u32, u32), img: &RgbaImage, config: &Config) -> Option<(&'a Mask, Option<Color>, Option<Color>)> {
     let mut selected = None;
     let mut selected_score = -1.0;
-    for mask in get_all_masks() {
+    for mask in masks.iter() {
         if let Some((score, Some(c1), Some(c2))) = get_mask_colors(img, config, offset, &mask) {
             assert!(score >= 0.);
             // println!("Score for mask {}: {}", &mask.char, score);
@@ -166,7 +166,7 @@ mod tests {
     use termcolor::{BufferedStandardStream, ColorChoice};
     use crate::Config;
     use crate::printer::{BlockPrinter, Printer};
-    use crate::printer::block::masks::{choose_mask_and_colors, get_mask_colors, get_mask_for_char};
+    use crate::printer::block::masks::{choose_mask_and_colors, get_all_masks, get_mask_colors, get_mask_for_char};
 
     fn print_color(color: Rgba<u8>) {
         // create a dynamic image
@@ -233,7 +233,8 @@ mod tests {
         BlockPrinter.print(&mut stream, &img, &make_conf(8, 16)).unwrap();
         let rgbimg = img.to_rgba8();
         let config = make_conf(8, 16);
-        let (mask, fg, bg) = choose_mask_and_colors((0, 0), &rgbimg, &config).unwrap();
+        let mask_cache = get_all_masks();
+        let (mask, fg, bg) = choose_mask_and_colors(&mask_cache, (0, 0), &rgbimg, &config).unwrap();
         println!("Mask: {}", mask.char);
         println!("Colors: {:?} and {:?}", fg, bg);
         // print_color(fg);

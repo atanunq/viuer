@@ -79,6 +79,7 @@ fn print_with_add_blocks(
             Color::Ansi256(ansi256_from_rgb((color[0], color[1], color[2])))
         })
     };
+    let mask_cache = get_all_masks();
 
     for y in (0..height).step_by(2) {
         let is_last_row = y == height - 1;
@@ -88,7 +89,7 @@ fn print_with_add_blocks(
         for x in 0..width {
             let mut write_default = true;
             if !is_last_row {
-                if let Some((mask, fg_col, bg_col)) = choose_mask_and_colors((x * SUBPIXEL64_COLUMNS, y * SUBPIXEL64_COLUMNS), &img8_buffer, config) {
+                if let Some((mask, fg_col, bg_col)) = choose_mask_and_colors(&mask_cache, (x * SUBPIXEL64_COLUMNS, y * SUBPIXEL64_COLUMNS), &img8_buffer, config) {
                     let mut colorspec = ColorSpec::new();
                     match (fg_col, bg_col) {
                         (None, Some(bg)) => {
@@ -483,9 +484,11 @@ mod tests {
             width: Some(width), height: Some(height),
             ..Default::default()
         };
-        let a_conf = make_conf(0, 0, 80, 40, false, false);
-        let b_conf = make_conf(80, 0, 80, 40, true, false);
-        let img = image::io::Reader::open("Screenshot from 2024-11-24 16-01-50.png").unwrap()
+        let height = 30;
+        let width = 2 * height;
+        let a_conf = make_conf(0, 0, width, height, false, false);
+        let b_conf = make_conf(width as u16, 0, width, height, true, false);
+        let img = image::ImageReader::open("pancake.png").unwrap()
             .with_guessed_format().unwrap()
             .decode().unwrap();
         let mut stream = BufferedStandardStream::stdout(ColorChoice::Always);
