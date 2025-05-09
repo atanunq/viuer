@@ -96,6 +96,7 @@ fn check_iterm_support() -> bool {
             || term.contains("WezTerm")
             || term.contains("mintty")
             || term.contains("rio")
+            || term.contains("WarpTerminal")
         {
             return true;
         }
