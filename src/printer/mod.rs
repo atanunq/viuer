@@ -41,9 +41,18 @@ pub trait Printer {
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
-        let img = image::ImageReader::open(filename)?
-            .with_guessed_format()?
-            .decode()?;
+        let extension = filename
+            .as_ref()
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        let img = match extension {
+            #[cfg(feature = "print-file-svg")]
+            "svg" => try_load_svg_image(filename)?,
+            _ => image::ImageReader::open(filename)?
+                .with_guessed_format()?
+                .decode()?,
+        };
         self.print(stdout, &img, config)
     }
 }
@@ -216,6 +225,39 @@ fn adjust_offset(stdout: &mut impl Write, config: &Config) -> ViuResult {
         }
     }
     Ok(())
+}
+
+/// Load an SVG image from a file and convert it to a DynamicImage.
+#[cfg(feature = "print-file-svg")]
+fn try_load_svg_image<P: AsRef<Path>>(filename: P) -> ViuResult<DynamicImage> {
+    // SVGs are not supported by the image crate, so we need to handle them separately.
+    let tree = {
+        let mut opt = resvg::usvg::Options::default();
+        opt.fontdb_mut().load_system_fonts();
+
+        let svg_data = std::fs::read(&filename).unwrap();
+        resvg::usvg::Tree::from_data(&svg_data, &opt)?
+    };
+
+    let pixmap_size = tree.size().to_int_size();
+    let mut pixmap =
+        resvg::tiny_skia::Pixmap::new(pixmap_size.width(), pixmap_size.height()).unwrap();
+    resvg::render(
+        &tree,
+        resvg::tiny_skia::Transform::default(),
+        &mut pixmap.as_mut(),
+    );
+    let rgba = pixmap.data().to_vec();
+    let img = DynamicImage::ImageRgba8(
+        image::RgbaImage::from_raw(pixmap_size.width(), pixmap_size.height(), rgba).ok_or_else(
+            || {
+                ViuError::InvalidConfiguration(
+                    "SVG image could not be converted to RgbaImage".to_owned(),
+                )
+            },
+        )?,
+    );
+    Ok(img)
 }
 
 #[cfg(test)]
