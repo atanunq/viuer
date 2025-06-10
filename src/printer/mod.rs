@@ -276,9 +276,10 @@ fn try_load_svg_image<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResult
     let target_height_px = (svg_size.height() as f32 * scale) as u32;
 
     // Create pixmap with the calculated dimensions
-    let mut pixmap = resvg::tiny_skia::Pixmap::new(target_width_px, target_height_px).ok_or_else(|| {
-        ViuError::SVGProcessingError("Failed to create pixmap for SVG".to_owned())
-    })?;
+    let mut pixmap =
+        resvg::tiny_skia::Pixmap::new(target_width_px, target_height_px).ok_or_else(|| {
+            ViuError::SVGProcessingError("Failed to create pixmap for SVG".to_owned())
+        })?;
 
     // Render the SVG into the pixmap
     resvg::render(
