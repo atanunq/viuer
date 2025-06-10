@@ -240,11 +240,9 @@ fn try_load_svg_image<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResult
         let mut opt = resvg::usvg::Options::default();
         opt.fontdb_mut().load_system_fonts();
 
-        let svg_data = std::fs::read(&filename)
-            .map_err(|e| ViuError::SVGProcessingError(format!("Failed to read SVG file: {}", e)))?;
+        let svg_data = std::fs::read(&filename)?;
 
-        resvg::usvg::Tree::from_data(&svg_data, &opt)
-            .map_err(|e| ViuError::SVGProcessingError(format!("Failed to parse SVG: {}", e)))?
+        resvg::usvg::Tree::from_data(&svg_data, &opt)?
     };
 
     // The `resvg` crate guesses the SVG size based on `height`, `width` and `viewBox`

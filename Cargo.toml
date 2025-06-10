@@ -31,7 +31,7 @@ crossterm = { version = "0.29", default-features = false, features = ["windows"]
 default = []
 sixel = ["sixel-rs"]
 print-file = ["image/default-formats"] # Hide file printing behind a flag because it adds heavy dependencies.
-print-file-svg = ["print-file", "resvg"] # SVG support requires print-file and resvg dependency
+print-file-svg = ["print-file", "resvg"] # SVG support requires print-file and resvg dependency.
 
 [package.metadata.docs.rs]
 # Show all methods in the documentation, even the non-default ones.
