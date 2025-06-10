@@ -19,9 +19,9 @@ pub enum ViuError {
     /// Error while printing with sixel
     #[cfg(feature = "sixel")]
     SixelError(sixel_rs::status::Error),
-    /// Error while loading SVG image with the [`resvg`] crate
+    /// Error with SVG processing
     #[cfg(feature = "print-file-svg")]
-    ReSVG(resvg::usvg::Error),
+    SVGProcessingError(String),
 }
 
 impl std::error::Error for ViuError {}
@@ -53,7 +53,7 @@ impl From<sixel_rs::status::Error> for ViuError {
 #[cfg(feature = "print-file-svg")]
 impl From<resvg::usvg::Error> for ViuError {
     fn from(err: resvg::usvg::Error) -> Self {
-        ViuError::ReSVG(err)
+        ViuError::SVGProcessingError(format!("SVG parsing error: {}", err))
     }
 }
 
@@ -69,7 +69,7 @@ impl std::fmt::Display for ViuError {
             #[cfg(feature = "sixel")]
             ViuError::SixelError(e) => write!(f, "Sixel error: {:?}", e),
             #[cfg(feature = "print-file-svg")]
-            ViuError::ReSVG(e) => write!(f, "ReSVG error: {}", e),
+            ViuError::SVGProcessingError(s) => write!(f, "{}", s),
         }
     }
 }
