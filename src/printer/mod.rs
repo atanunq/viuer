@@ -262,7 +262,7 @@ fn try_load_svg_image<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResult
     };
 
     // Determine the image size in pixels from the target size in cells and `svg_pixels_per_cell`
-    let pixels_per_cell = config.svg_pixels_per_cell;
+    let pixels_per_cell = config.svg_pixels_per_cell as u32;
     let target_width_px = target_width_cells * pixels_per_cell;
     let target_height_px = target_height_cells * 2 * pixels_per_cell;
 
