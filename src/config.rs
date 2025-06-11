@@ -36,7 +36,7 @@ pub struct Config {
     pub use_sixel: bool,
     /// Pixels per terminal cell for SVG rendering. Defaults to 16.
     #[cfg(feature = "print-file-svg")]
-    pub svg_pixels_per_cell: u32,
+    pub svg_pixels_per_cell: u8,
 }
 
 impl std::default::Default for Config {
