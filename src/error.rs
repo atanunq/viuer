@@ -19,6 +19,9 @@ pub enum ViuError {
     /// Error while printing with sixel
     #[cfg(feature = "sixel")]
     SixelError(sixel_rs::status::Error),
+    /// Boxed generic error.
+    #[cfg(feature = "icy_sixel")]
+    IcySixelError(String),
 }
 
 impl std::error::Error for ViuError {}
@@ -58,6 +61,8 @@ impl std::fmt::Display for ViuError {
             ViuError::KittyNotSupported => write!(f, "Kitty graphics protocol not supported"),
             #[cfg(feature = "sixel")]
             ViuError::SixelError(e) => write!(f, "Sixel error: {:?}", e),
+            #[cfg(feature = "icy_sixel")]
+            ViuError::IcySixelError(e) => write!(f, "Icy Sixel error: {:?}", e),
         }
     }
 }
