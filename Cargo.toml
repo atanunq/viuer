@@ -17,14 +17,14 @@ rust-version = "1.80"
 ansi_colours = "1"
 base64 = "0.22"
 console = { version = "0.15", default-features = false }
-crossterm = { version = "0.28", default-features = false }
+crossterm = { version = "0.29", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png"] }
 tempfile = "3"
 termcolor = "1"
 sixel-rs = { version = "0.3", optional = true}
 
 [target.'cfg(windows)'.dependencies]
-crossterm = { version = "0.28", default-features = false, features = ["windows"]}
+crossterm = { version = "0.29", default-features = false, features = ["windows"]}
 
 [features]
 default = []
