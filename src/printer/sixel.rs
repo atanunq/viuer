@@ -3,16 +3,14 @@ use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use console::{Key, Term};
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
-use lazy_static::lazy_static;
 use sixel_rs::encoder::{Encoder, QuickFrameBuilder};
 use sixel_rs::optflags::EncodePolicy;
 use std::io::Write;
+use std::sync::LazyLock;
 
 pub struct SixelPrinter;
 
-lazy_static! {
-    static ref SIXEL_SUPPORT: bool = check_sixel_support();
-}
+static SIXEL_SUPPORT: LazyLock<bool> = LazyLock::new(check_sixel_support);
 
 /// Returns the terminal's support for Sixel.
 pub fn is_sixel_supported() -> bool {
