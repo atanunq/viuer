@@ -57,10 +57,13 @@ pub enum KittySupport {
 
 // Check if Kitty protocol can be used
 fn check_kitty_support() -> KittySupport {
+    let mut stdout = std::io::stdout();
+    let term = Term::stdout();
+
     // first check if kitty protocol is generally available
-    if supports_kitty_protocol().is_ok() {
+    if supports_kitty_protocol(&mut stdout, &term).is_ok() {
         // then test if the current terminal supports reading from a file the application writes (for example this is not possible via ssh)
-        if has_local_support().is_ok() {
+        if has_local_support(&mut stdout, &term).is_ok() {
             return KittySupport::Local;
         }
 
@@ -71,19 +74,18 @@ fn check_kitty_support() -> KittySupport {
 }
 
 // Query the terminal whether it can display an image from a file
-fn supports_kitty_protocol() -> ViuResult {
+fn supports_kitty_protocol(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
     // send the query
-    print!(
+    write!(
+        stdout,
         // the following are 2 queries, the first "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b" is the *query action* to query kitty graphics support
         // followed by the request for the "primary device attributes" "\x1b[c", both are separated by a "\"
         // terminals that dont support kitty will only respond to the "primary device attributes" request
         // whereas terminals that support kitty, will respond to both actions, specifically we are searching for "_Gi=31"
         "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c",
-    );
+    )?;
     std::io::stdout().flush()?;
 
-    // collect Kitty's response after the query
-    let term = Term::stdout();
     let mut response = Vec::new();
 
     // determine if we had the "primary device attributes" reply, as otherwise "c" *could* be part of another query response beforehand
@@ -93,7 +95,7 @@ fn supports_kitty_protocol() -> ViuResult {
     // this sequenece is also called "CSI ? 6" in "Terminal Response" at https://vt100.net/docs/vt510-rm/DA1.html
     let pda_seq = Key::UnknownEscSeq(['[', '?', '6'].into());
 
-    while let Ok(key) = term.read_key() {
+    while let Ok(key) = stdin.read_key() {
         if key == pda_seq {
             had_pda = true;
         }
@@ -173,14 +175,15 @@ fn wait_for_ok(stdin: &impl ReadKey) -> ViuResult {
 }
 
 /// Query the terminal whether it can display an image from a file
-fn has_local_support() -> ViuResult {
+fn has_local_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
     // create a temp file that will hold a 1x1 image
     let x = image::RgbaImage::new(1, 1);
     let raw_img = x.as_raw();
     let temp_file = store_in_tmp_file(raw_img)?;
 
     // send the query
-    print!(
+    write!(
+        stdout,
         // t=t tells Kitty it's reading from a temp file and will attempt to delete if afterwards
         "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
         general_purpose::STANDARD.encode(
@@ -189,12 +192,10 @@ fn has_local_support() -> ViuResult {
                 .to_str()
                 .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
         )
-    );
+    )?;
     std::io::stdout().flush()?;
 
-    let term = Term::stdout();
-
-    wait_for_ok(&term)?;
+    wait_for_ok(stdin)?;
 
     close_tmp_file(temp_file)?;
 
@@ -379,6 +380,77 @@ mod tests {
             result,
             "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,i=10,m=1;AAAAAAIEBgg=\x1b\\\n"
         );
+        assert!(test_response.reached_end());
+    }
+
+    #[test]
+    fn test_kitty_supported_but_not_remote() {
+        // test kitty protocol support
+        let mut stdout = Vec::new();
+
+        let test_data = [
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('3'),
+            Key::Char('1'),
+            Key::Char(';'),
+            Key::Char('O'),
+            Key::Char('K'),
+            Key::UnknownEscSeq(['\\'].into()),
+            Key::UnknownEscSeq(['[', '?', '6'].into()),
+            Key::Char('2'),
+            Key::Char(';'),
+            Key::Char('1'),
+            Key::Char(';'),
+            Key::Char('4'),
+            Key::Char('c'),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        supports_kitty_protocol(&mut stdout, &test_response).unwrap();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        assert_eq!(result, "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c");
+        assert!(test_response.reached_end());
+
+        stdout.clear();
+
+        // test kitty local protocol support
+        let mut stdout = Vec::new();
+
+        let test_data = [
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('3'),
+            Key::Char('1'),
+            Key::Char(';'),
+            Key::Char('E'),
+            Key::Char('N'),
+            Key::Char('O'),
+            Key::Char('T'),
+            Key::Char('S'),
+            Key::Char('U'),
+            Key::Char('P'),
+            Key::Char('P'),
+            Key::Char('O'),
+            Key::Char('R'),
+            Key::Char('T'),
+            Key::Char('E'),
+            Key::Char('D'),
+            Key::Char(':'),
+            Key::UnknownEscSeq(['\\'].into()),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        has_local_support(&mut stdout, &test_response).unwrap_err();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        assert!(result.starts_with("\x1b_Gi=31,s=1,v=1,a=q,t=t;"));
+        assert!(result.ends_with("\x1b\\"));
         assert!(test_response.reached_end());
     }
 }
