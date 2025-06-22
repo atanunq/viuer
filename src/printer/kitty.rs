@@ -143,6 +143,35 @@ fn close_tmp_file(temp_file: NamedTempFile) -> ViuResult {
     Ok(())
 }
 
+/// Wait for the common "OK" response until returning.
+fn wait_for_ok(stdin: &impl ReadKey) -> ViuResult {
+    let mut response = Vec::new();
+
+    while let Ok(key) = stdin.read_key() {
+        // The response will end with Esc('x1b'), followed by Backslash('\').
+        // Also, break if the Unknown key is found, which is returned when we're not in a tty
+        // https://sw.kovidgoyal.net/kitty/graphics-protocol/#display-images-on-screen
+        let should_break = key == Key::UnknownEscSeq(vec!['\\']) || key == Key::Unknown;
+        response.push(key);
+        if should_break {
+            break;
+        }
+    }
+
+    // Kitty response should end with these 3 Keys if it was successful
+    let expected = [
+        Key::Char('O'),
+        Key::Char('K'),
+        Key::UnknownEscSeq(vec!['\\']),
+    ];
+
+    if response.len() >= expected.len() && response[response.len() - 3..] == expected {
+        return Ok(());
+    }
+
+    Err(ViuError::KittyResponse(response))
+}
+
 /// Query the terminal whether it can display an image from a file
 fn has_local_support() -> ViuResult {
     // create a temp file that will hold a 1x1 image
@@ -163,34 +192,13 @@ fn has_local_support() -> ViuResult {
     );
     std::io::stdout().flush()?;
 
-    // collect Kitty's response after the query
     let term = Term::stdout();
-    let mut response = Vec::new();
 
-    while let Ok(key) = term.read_key() {
-        // The response will end with Esc('x1b'), followed by Backslash('\').
-        // Also, break if the Unknown key is found, which is returned when we're not in a tty
-        let should_break = key == Key::UnknownEscSeq(vec!['\\']) || key == Key::Unknown;
-        response.push(key);
-        if should_break {
-            break;
-        }
-    }
+    wait_for_ok(&term)?;
 
     close_tmp_file(temp_file)?;
 
-    // Kitty response should end with these 3 Keys if it was successful
-    let expected = [
-        Key::Char('O'),
-        Key::Char('K'),
-        Key::UnknownEscSeq(vec!['\\']),
-    ];
-
-    if response.len() >= expected.len() && response[response.len() - 3..] == expected {
-        return Ok(());
-    }
-
-    Err(ViuError::KittyResponse(response))
+    Ok(())
 }
 
 // Print with kitty graphics protocol through a temp file
@@ -212,7 +220,7 @@ fn print_local(
 
     write!(
         stdout,
-        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t;{}\x1b\\",
+        "\x1b_Gf=32,s={},v={},c={},r={},a=T,i=10,t=t;{}\x1b\\",
         img.width(),
         img.height(),
         w,
@@ -226,6 +234,8 @@ fn print_local(
     )?;
     writeln!(stdout)?;
     stdout.flush()?;
+
+    wait_for_ok(stdin)?;
 
     close_tmp_file(temp_file)?;
 
@@ -270,6 +280,7 @@ fn print_remote(
     }
     writeln!(stdout)?;
     stdout.flush()?;
+
     Ok((w, h))
 }
 
@@ -304,7 +315,18 @@ mod tests {
 
         let mut vec = Vec::new();
 
-        let test_data = [];
+        let test_data = [
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('1'),
+            Key::Char('0'),
+            Key::Char(';'),
+            Key::Char('O'),
+            Key::Char('K'),
+            Key::UnknownEscSeq(['\\'].into()),
+        ];
         let test_response = TestKeys::new(&test_data);
 
         assert_eq!(
@@ -313,7 +335,7 @@ mod tests {
         );
         let result = std::str::from_utf8(&vec).unwrap();
 
-        assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,t=t;"));
+        assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,i=10,t=t;"));
         assert!(result.ends_with("\x1b\\\n"));
         assert!(test_response.reached_end());
     }
