@@ -1,6 +1,7 @@
 use crate::config::Config;
 use crate::error::{ViuError, ViuResult};
 use crate::utils::terminal_size;
+use console::{Key, Term};
 use crossterm::cursor::{MoveRight, MoveTo, MoveToPreviousLine};
 use crossterm::execute;
 use image::{DynamicImage, GenericImageView};
@@ -23,6 +24,65 @@ pub use self::sixel::{is_sixel_supported, SixelPrinter};
 mod iterm;
 pub use iterm::iTermPrinter;
 pub use iterm::is_iterm_supported;
+#[cfg(test)]
+pub(crate) use test_utils::TestKeys;
+
+/// Trait to allow reading keys from multiple inputs like [`console::Term`] or a custom Testing utility.
+pub(crate) trait ReadKey {
+    fn read_key(&self) -> std::io::Result<Key>;
+}
+
+impl ReadKey for Term {
+    fn read_key(&self) -> std::io::Result<Key> {
+        self.read_key()
+    }
+}
+
+#[cfg(test)]
+mod test_utils {
+    use std::{cell::RefCell, io};
+
+    use console::Key;
+
+    use crate::printer::ReadKey;
+
+    /// Test Utility to replay key sequences like otherwise gotten from a normal console via [`console::Term`].
+    #[derive(Debug, Clone)]
+    pub(crate) struct TestKeys<'a> {
+        data: &'a [Key],
+        next_idx: RefCell<usize>,
+    }
+
+    impl<'a> TestKeys<'a> {
+        pub fn new(data: &'a [Key]) -> Self {
+            Self {
+                data,
+                next_idx: RefCell::new(0),
+            }
+        }
+
+        /// Test if all the data in this instance has been replayed exactly.
+        pub fn reached_end(&self) -> bool {
+            *self.next_idx.borrow() == self.data.len()
+        }
+    }
+
+    impl ReadKey for TestKeys<'_> {
+        fn read_key(&self) -> io::Result<Key> {
+            let idx = *self.next_idx.borrow();
+
+            if idx >= self.data.len() {
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "Reached the end of the data",
+                ));
+            }
+
+            *self.next_idx.borrow_mut() += 1;
+            Ok(self.data[idx].clone())
+        }
+    }
+}
 
 pub trait Printer {
     // Print the given image in the terminal while respecting the options in the config struct.
@@ -30,6 +90,7 @@ pub trait Printer {
     fn print(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)>;
@@ -38,13 +99,14 @@ pub trait Printer {
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         let img = image::ImageReader::open(filename)?
             .with_guessed_format()?
             .decode()?;
-        self.print(stdout, &img, config)
+        self.print(stdout, stdin, &img, config)
     }
 }
 
@@ -61,15 +123,16 @@ impl Printer for PrinterType {
     fn print(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         match self {
-            PrinterType::Block => BlockPrinter.print(stdout, img, config),
-            PrinterType::Kitty => KittyPrinter.print(stdout, img, config),
-            PrinterType::iTerm => iTermPrinter.print(stdout, img, config),
+            PrinterType::Block => BlockPrinter.print(stdout, stdin, img, config),
+            PrinterType::Kitty => KittyPrinter.print(stdout, stdin, img, config),
+            PrinterType::iTerm => iTermPrinter.print(stdout, stdin, img, config),
             #[cfg(feature = "sixel")]
-            PrinterType::Sixel => SixelPrinter.print(stdout, img, config),
+            PrinterType::Sixel => SixelPrinter.print(stdout, stdin, img, config),
         }
     }
 
@@ -77,15 +140,16 @@ impl Printer for PrinterType {
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         match self {
-            PrinterType::Block => BlockPrinter.print_from_file(stdout, filename, config),
-            PrinterType::Kitty => KittyPrinter.print_from_file(stdout, filename, config),
-            PrinterType::iTerm => iTermPrinter.print_from_file(stdout, filename, config),
+            PrinterType::Block => BlockPrinter.print_from_file(stdout, stdin, filename, config),
+            PrinterType::Kitty => KittyPrinter.print_from_file(stdout, stdin, filename, config),
+            PrinterType::iTerm => iTermPrinter.print_from_file(stdout, stdin, filename, config),
             #[cfg(feature = "sixel")]
-            PrinterType::Sixel => SixelPrinter.print_from_file(stdout, filename, config),
+            PrinterType::Sixel => SixelPrinter.print_from_file(stdout, stdin, filename, config),
         }
     }
 }

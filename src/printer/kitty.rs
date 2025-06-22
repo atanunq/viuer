@@ -1,5 +1,5 @@
 use crate::error::{ViuError, ViuResult};
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
@@ -22,6 +22,7 @@ impl Printer for KittyPrinter {
     fn print(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         img: &image::DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
@@ -29,11 +30,11 @@ impl Printer for KittyPrinter {
             KittySupport::None => Err(ViuError::KittyNotSupported),
             KittySupport::Local => {
                 // print from file
-                print_local(stdout, img, config)
+                print_local(stdout, stdin, img, config)
             }
             KittySupport::Remote => {
                 // print through escape codes
-                print_remote(stdout, img, config)
+                print_remote(stdout, stdin, img, config)
             }
         }
     }
@@ -196,6 +197,7 @@ fn has_local_support() -> ViuResult {
 // TODO: try with kitty's supported compression
 fn print_local(
     stdout: &mut impl Write,
+    stdin: &impl ReadKey,
     img: &image::DynamicImage,
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
@@ -234,6 +236,7 @@ fn print_local(
 // TODO: try compression
 fn print_remote(
     stdout: &mut impl Write,
+    stdin: &impl ReadKey,
     img: &image::DynamicImage,
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
@@ -285,6 +288,8 @@ fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<NamedTempFile, ViuError>
 
 #[cfg(test)]
 mod tests {
+    use crate::printer::TestKeys;
+
     use super::*;
     use image::{DynamicImage, GenericImage};
 
@@ -298,11 +303,19 @@ mod tests {
         };
 
         let mut vec = Vec::new();
-        assert_eq!(print_local(&mut vec, &img, &config).unwrap(), (40, 13));
+
+        let test_data = [];
+        let test_response = TestKeys::new(&test_data);
+
+        assert_eq!(
+            print_local(&mut vec, &test_response, &img, &config).unwrap(),
+            (40, 13)
+        );
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,t=t;"));
         assert!(result.ends_with("\x1b\\\n"));
+        assert!(test_response.reached_end());
     }
 
     #[test]
@@ -317,12 +330,20 @@ mod tests {
         };
 
         let mut vec = Vec::new();
-        assert_eq!(print_remote(&mut vec, &img, &config).unwrap(), (1, 1));
+
+        let test_data = [];
+        let test_response = TestKeys::new(&test_data);
+
+        assert_eq!(
+            print_remote(&mut vec, &test_response, &img, &config).unwrap(),
+            (1, 1)
+        );
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert_eq!(
             result,
             "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,m=1;AAAAAAIEBgg=\x1b\\\n"
         );
+        assert!(test_response.reached_end());
     }
 }

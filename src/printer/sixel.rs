@@ -1,5 +1,5 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
 use crate::Config;
 use console::{Key, Term};
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
@@ -21,6 +21,7 @@ impl Printer for SixelPrinter {
     fn print(
         &self,
         stdout: &mut impl Write,
+        _stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {

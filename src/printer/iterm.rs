@@ -1,5 +1,5 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, GenericImageView, ImageEncoder};
@@ -26,6 +26,7 @@ impl Printer for iTermPrinter {
     fn print(
         &self,
         stdout: &mut impl Write,
+        _stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
@@ -47,6 +48,7 @@ impl Printer for iTermPrinter {
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
+        _stdin: &impl ReadKey,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
@@ -113,6 +115,8 @@ fn check_iterm_support() -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::printer::TestKeys;
+
     use super::*;
     use image::GenericImage;
 
@@ -128,7 +132,12 @@ mod tests {
         };
         let mut vec = Vec::new();
 
-        assert_eq!(iTermPrinter.print(&mut vec, &img, &config).unwrap(), (2, 2));
+        let stdin = TestKeys::new(&[]);
+
+        assert_eq!(
+            iTermPrinter.print(&mut vec, &stdin, &img, &config).unwrap(),
+            (2, 2)
+        );
         assert_eq!(std::str::from_utf8(&vec).unwrap(), "\x1b[4;5H\x1b]1337;File=inline=1;preserveAspectRatio=1;size=95;width=2;height=2:iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAAJklEQVR4AQEbAOT/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACBAYIAEMAFdTlTsEAAAAASUVORK5CYII=\x07\n");
     }
 }
