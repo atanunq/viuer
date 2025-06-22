@@ -56,16 +56,76 @@ pub enum KittySupport {
 
 // Check if Kitty protocol can be used
 fn check_kitty_support() -> KittySupport {
-    if let Ok(term) = std::env::var("TERM") {
-        if term.contains("kitty") || term.contains("ghostty") {
-            if has_local_support().is_ok() {
-                return KittySupport::Local;
-            }
+    // first check if kitty protocol is generally available
+    if supports_kitty_protocol().is_ok() {
+        // then test if the current terminal supports reading from a file the application writes (for example this is not possible via ssh)
+        if has_local_support().is_ok() {
+            return KittySupport::Local;
+        }
 
-            return KittySupport::Remote;
+        return KittySupport::Remote;
+    }
+
+    KittySupport::None
+}
+
+// Query the terminal whether it can display an image from a file
+fn supports_kitty_protocol() -> ViuResult {
+    // send the query
+    print!(
+        // the following are 2 queries, the first "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b" is the *query action* to query kitty graphics support
+        // followed by the request for the "primary device attributes" "\x1b[c", both are separated by a "\"
+        // terminals that dont support kitty will only respond to the "primary device attributes" request
+        // whereas terminals that support kitty, will respond to both actions, specifically we are searching for "_Gi=31"
+        "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c",
+    );
+    std::io::stdout().flush()?;
+
+    // collect Kitty's response after the query
+    let term = Term::stdout();
+    let mut response = Vec::new();
+
+    // determine if we had the "primary device attributes" reply, as otherwise "c" *could* be part of another query response beforehand
+    let mut had_pda = false;
+
+    // assign it once instead of having to allocate a vector with static content in each loop
+    // this sequenece is also called "CSI ? 6" in "Terminal Response" at https://vt100.net/docs/vt510-rm/DA1.html
+    let pda_seq = Key::UnknownEscSeq(['[', '?', '6'].into());
+
+    while let Ok(key) = term.read_key() {
+        if key == pda_seq {
+            had_pda = true;
+        }
+
+        // The "primary device attributes" response will end with a "c" character
+        // see "Terminal Response" at https://vt100.net/docs/vt510-rm/DA1.html
+        // Alternatively, terminate on unknown keys, this could for example happen in cargo test with a `console::Term` read_key, for some reason
+        let should_break = (had_pda && key == Key::Char('c')) || key == Key::Unknown;
+
+        response.push(key);
+
+        if should_break {
+            break;
         }
     }
-    KittySupport::None
+
+    // The Graphics query response
+    let expected = [
+        Key::UnknownEscSeq(['_'].into()),
+        Key::Char('G'),
+        Key::Char('i'),
+        Key::Char('='),
+        Key::Char('3'),
+        Key::Char('1'),
+    ];
+
+    // The Graphics query and the device attributes response could theoretically be in any order
+    // but most terminals will reply in a FIFO order
+    if response.len() >= expected.len() && response[..expected.len()] == expected {
+        return Ok(());
+    }
+
+    Err(ViuError::KittyResponse(response))
 }
 
 /// Close the temporary file that was created, filtering out [`NotFound`](ErrorKind::NotFound) errors.
