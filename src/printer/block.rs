@@ -1,5 +1,5 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, Printer};
+use crate::printer::{adjust_offset, Printer, ReadKey};
 use crate::Config;
 
 use ansi_colours::ansi256_from_rgb;
@@ -23,6 +23,7 @@ impl Printer for BlockPrinter {
         &self,
         // TODO: The provided object is not used because termcolor needs an implementation of the WriteColor trait
         _stdout: &mut impl Write,
+        _stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
