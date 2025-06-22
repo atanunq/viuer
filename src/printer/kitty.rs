@@ -3,8 +3,8 @@ use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
-use std::io::Error;
 use std::io::Write;
+use std::io::{Error, ErrorKind};
 use std::sync::LazyLock;
 use tempfile::NamedTempFile;
 
@@ -68,7 +68,21 @@ fn check_kitty_support() -> KittySupport {
     KittySupport::None
 }
 
-// Query the terminal whether it can display an image from a file
+/// Close the temporary file that was created, filtering out [`NotFound`](ErrorKind::NotFound) errors.
+fn close_tmp_file(temp_file: NamedTempFile) -> ViuResult {
+    // Explicitly clean up when finished with the file because destructor, OS and Kitty are not deterministic.
+    if let Err(err) = temp_file.close() {
+        // Proper Kitty terminals *will delete* the file after fully reading it, if it is in a known temporary directory
+        // so we dont want to error if the file does not exist anymore
+        if err.kind() != ErrorKind::NotFound {
+            return Err(err.into());
+        }
+    }
+
+    Ok(())
+}
+
+/// Query the terminal whether it can display an image from a file
 fn has_local_support() -> ViuResult {
     // create a temp file that will hold a 1x1 image
     let x = image::RgbaImage::new(1, 1);
@@ -102,8 +116,7 @@ fn has_local_support() -> ViuResult {
         }
     }
 
-    // Explicitly clean up when finished with the file because destructor, OS and Kitty are not deterministic.
-    temp_file.close()?;
+    close_tmp_file(temp_file)?;
 
     // Kitty response should end with these 3 Keys if it was successful
     let expected = [
@@ -152,8 +165,7 @@ fn print_local(
     writeln!(stdout)?;
     stdout.flush()?;
 
-    // Explicitly clean up when finished with the file because destructor, OS and Kitty are not deterministic.
-    temp_file.close()?;
+    close_tmp_file(temp_file)?;
 
     Ok((w, h))
 }
