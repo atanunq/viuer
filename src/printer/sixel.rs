@@ -65,6 +65,11 @@ fn check_device_attrs() -> ViuResult<bool> {
     let mut response = String::new();
 
     while let Ok(key) = term.read_key() {
+        // exit on first "Unknown" key as we know that this is not a proper response anymore
+        if key == Key::Unknown {
+            break;
+        }
+
         if let Key::Char(c) = key {
             response.push(c);
             if c == 'c' {
