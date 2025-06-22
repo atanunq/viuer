@@ -11,6 +11,7 @@ license = "MIT"
 categories = ["command-line-interface"]
 keywords = ["terminal", "image"]
 exclude = [".github"]
+rust-version = "1.80"
 
 [dependencies]
 ansi_colours = "1"
@@ -18,7 +19,6 @@ base64 = "0.22"
 console = { version = "0.15", default-features = false }
 crossterm = { version = "0.28", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png"] }
-lazy_static = "1.5"
 tempfile = "3"
 termcolor = "1"
 sixel-rs = { version = "0.3", optional = true}

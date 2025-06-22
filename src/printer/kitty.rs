@@ -3,17 +3,15 @@ use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
-use lazy_static::lazy_static;
 use std::io::Error;
 use std::io::Write;
+use std::sync::LazyLock;
 use tempfile::NamedTempFile;
 
 pub struct KittyPrinter;
 
 const TEMP_FILE_PREFIX: &str = ".tty-graphics-protocol.viuer.";
-lazy_static! {
-    static ref KITTY_SUPPORT: KittySupport = check_kitty_support();
-}
+static KITTY_SUPPORT: LazyLock<KittySupport> = LazyLock::new(check_kitty_support);
 
 /// Returns the terminal's support for the Kitty graphics protocol.
 pub fn get_kitty_support() -> KittySupport {
