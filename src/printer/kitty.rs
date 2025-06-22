@@ -3,8 +3,8 @@ use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
-use std::io::Write;
 use std::io::Error;
+use std::io::Write;
 use std::sync::LazyLock;
 use tempfile::NamedTempFile;
 
