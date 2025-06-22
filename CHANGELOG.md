@@ -1,6 +1,7 @@
 ## next
 - remove `lazy_static` dependency in favor of `std::sync::LazyLock`
 - MSRV is now 1.80
+- Dont Error in kitty if the temporary file has been deleted by the terminal. (Now `KittySupport::Local` is possible again)
 
 ## 0.9.2
 - Use iterm and sixel in more terminals
