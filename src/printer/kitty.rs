@@ -264,7 +264,7 @@ fn print_remote(
     // write the first chunk, which describes the image
     write!(
         stdout,
-        "\x1b_Gf=32,a=T,t=d,s={},v={},c={},r={},m=1;{}\x1b\\",
+        "\x1b_Gf=32,a=T,t=d,s={},v={},c={},r={},i=10,m=1;{}\x1b\\",
         img.width(),
         img.height(),
         w,
@@ -280,6 +280,8 @@ fn print_remote(
     }
     writeln!(stdout)?;
     stdout.flush()?;
+
+    wait_for_ok(stdin)?;
 
     Ok((w, h))
 }
@@ -353,7 +355,18 @@ mod tests {
 
         let mut vec = Vec::new();
 
-        let test_data = [];
+        let test_data = [
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('1'),
+            Key::Char('0'),
+            Key::Char(';'),
+            Key::Char('O'),
+            Key::Char('K'),
+            Key::UnknownEscSeq(['\\'].into()),
+        ];
         let test_response = TestKeys::new(&test_data);
 
         assert_eq!(
@@ -364,7 +377,7 @@ mod tests {
 
         assert_eq!(
             result,
-            "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,m=1;AAAAAAIEBgg=\x1b\\\n"
+            "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,i=10,m=1;AAAAAAIEBgg=\x1b\\\n"
         );
         assert!(test_response.reached_end());
     }
