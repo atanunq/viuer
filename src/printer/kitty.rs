@@ -4,7 +4,7 @@ use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
 use std::io::Write;
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::sync::LazyLock;
 use tempfile::NamedTempFile;
 
@@ -79,9 +79,12 @@ fn has_local_support() -> ViuResult {
     print!(
         // t=t tells Kitty it's reading from a temp file and will attempt to delete if afterwards
         "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
-        general_purpose::STANDARD.encode(temp_file.path().to_str().ok_or_else(|| ViuError::Io(
-            Error::new(ErrorKind::Other, "Could not convert path to &str")
-        ))?)
+        general_purpose::STANDARD.encode(
+            temp_file
+                .path()
+                .to_str()
+                .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
+        )
     );
     std::io::stdout().flush()?;
 
@@ -139,9 +142,12 @@ fn print_local(
         img.height(),
         w,
         h,
-        general_purpose::STANDARD.encode(temp_file.path().to_str().ok_or_else(|| ViuError::Io(
-            Error::new(ErrorKind::Other, "Could not convert path to &str")
-        ))?)
+        general_purpose::STANDARD.encode(
+            temp_file
+                .path()
+                .to_str()
+                .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
+        )
     )?;
     writeln!(stdout)?;
     stdout.flush()?;
