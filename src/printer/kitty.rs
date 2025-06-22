@@ -453,4 +453,19 @@ mod tests {
         assert!(result.ends_with("\x1b\\"));
         assert!(test_response.reached_end());
     }
+
+    #[test]
+    fn test_no_kitty_support() {
+        let mut stdout = Vec::new();
+
+        // only the "primary device attributes"
+        let test_data = [Key::UnknownEscSeq(['[', '?', '6'].into()), Key::Char('c')];
+        let test_response = TestKeys::new(&test_data);
+
+        supports_kitty_protocol(&mut stdout, &test_response).unwrap_err();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        assert_eq!(result, "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c");
+        assert!(test_response.reached_end());
+    }
 }
