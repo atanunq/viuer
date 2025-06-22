@@ -1,3 +1,6 @@
+## 0.9.2
+- Use iterm and sixel in more terminals
+
 ## 0.9.1
 - Add docs.rs metadata
 
