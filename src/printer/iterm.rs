@@ -12,15 +12,16 @@ use std::{
     path::Path,
 };
 
-#[allow(non_camel_case_types)]
-pub struct iTermPrinter;
-
 static ITERM_SUPPORT: LazyLock<bool> = LazyLock::new(check_iterm_support);
 
 /// Returns the terminal's support for the iTerm graphics protocol.
 pub fn is_iterm_supported() -> bool {
     *ITERM_SUPPORT
 }
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Clone)]
+pub struct iTermPrinter;
 
 impl Printer for iTermPrinter {
     fn print(

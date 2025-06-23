@@ -8,6 +8,7 @@ use sixel_rs::optflags::EncodePolicy;
 use std::io::Write;
 use std::sync::LazyLock;
 
+#[derive(Debug, Clone)]
 pub struct SixelPrinter;
 
 static SIXEL_SUPPORT: LazyLock<bool> = LazyLock::new(check_sixel_support);

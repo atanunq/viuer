@@ -16,6 +16,7 @@ const LOWER_HALF_BLOCK: &str = "\u{2584}";
 const CHECKERBOARD_BACKGROUND_LIGHT: (u8, u8, u8) = (153, 153, 153);
 const CHECKERBOARD_BACKGROUND_DARK: (u8, u8, u8) = (102, 102, 102);
 
+#[derive(Debug, Clone)]
 pub struct BlockPrinter;
 
 impl Printer for BlockPrinter {

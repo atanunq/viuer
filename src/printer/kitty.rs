@@ -8,8 +8,6 @@ use std::io::{Error, ErrorKind};
 use std::sync::LazyLock;
 use tempfile::NamedTempFile;
 
-pub struct KittyPrinter;
-
 const TEMP_FILE_PREFIX: &str = ".tty-graphics-protocol.viuer.";
 static KITTY_SUPPORT: LazyLock<KittySupport> = LazyLock::new(check_kitty_support);
 
@@ -17,6 +15,9 @@ static KITTY_SUPPORT: LazyLock<KittySupport> = LazyLock::new(check_kitty_support
 pub fn get_kitty_support() -> KittySupport {
     *KITTY_SUPPORT
 }
+
+#[derive(Debug, Clone)]
+pub struct KittyPrinter;
 
 impl Printer for KittyPrinter {
     fn print(
@@ -44,7 +45,7 @@ impl Printer for KittyPrinter {
     // fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {}
 }
 
-#[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 /// The extend to which the Kitty graphics protocol can be used.
 pub enum KittySupport {
     /// The Kitty graphics protocol is not supported.
