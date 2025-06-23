@@ -1,5 +1,5 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, Printer};
+use crate::printer::{adjust_offset, Printer, ReadKey};
 use crate::Config;
 
 use ansi_colours::ansi256_from_rgb;
@@ -16,6 +16,7 @@ const LOWER_HALF_BLOCK: &str = "\u{2584}";
 const CHECKERBOARD_BACKGROUND_LIGHT: (u8, u8, u8) = (153, 153, 153);
 const CHECKERBOARD_BACKGROUND_DARK: (u8, u8, u8) = (102, 102, 102);
 
+#[derive(Debug, Clone)]
 pub struct BlockPrinter;
 
 impl Printer for BlockPrinter {
@@ -23,6 +24,7 @@ impl Printer for BlockPrinter {
         &self,
         // TODO: The provided object is not used because termcolor needs an implementation of the WriteColor trait
         _stdout: &mut impl Write,
+        _stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {

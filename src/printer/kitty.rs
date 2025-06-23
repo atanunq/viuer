@@ -1,14 +1,12 @@
 use crate::error::{ViuError, ViuResult};
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
-use std::io::Error;
 use std::io::Write;
+use std::io::{Error, ErrorKind};
 use std::sync::LazyLock;
 use tempfile::NamedTempFile;
-
-pub struct KittyPrinter;
 
 const TEMP_FILE_PREFIX: &str = ".tty-graphics-protocol.viuer.";
 static KITTY_SUPPORT: LazyLock<KittySupport> = LazyLock::new(check_kitty_support);
@@ -18,10 +16,14 @@ pub fn get_kitty_support() -> KittySupport {
     *KITTY_SUPPORT
 }
 
+#[derive(Debug, Clone)]
+pub struct KittyPrinter;
+
 impl Printer for KittyPrinter {
     fn print(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         img: &image::DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
@@ -29,11 +31,11 @@ impl Printer for KittyPrinter {
             KittySupport::None => Err(ViuError::KittyNotSupported),
             KittySupport::Local => {
                 // print from file
-                print_local(stdout, img, config)
+                print_local(stdout, stdin, img, config)
             }
             KittySupport::Remote => {
                 // print through escape codes
-                print_remote(stdout, img, config)
+                print_remote(stdout, stdin, img, config)
             }
         }
     }
@@ -43,7 +45,7 @@ impl Printer for KittyPrinter {
     // fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {}
 }
 
-#[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 /// The extend to which the Kitty graphics protocol can be used.
 pub enum KittySupport {
     /// The Kitty graphics protocol is not supported.
@@ -56,54 +58,108 @@ pub enum KittySupport {
 
 // Check if Kitty protocol can be used
 fn check_kitty_support() -> KittySupport {
-    if let Ok(term) = std::env::var("TERM") {
-        if term.contains("kitty") || term.contains("ghostty") {
-            if has_local_support().is_ok() {
-                return KittySupport::Local;
-            }
+    let mut stdout = std::io::stdout();
+    let term = Term::stdout();
 
-            return KittySupport::Remote;
+    // first check if kitty protocol is generally available
+    if supports_kitty_protocol(&mut stdout, &term).is_ok() {
+        // then test if the current terminal supports reading from a file the application writes (for example this is not possible via ssh)
+        if has_local_support(&mut stdout, &term).is_ok() {
+            return KittySupport::Local;
         }
+
+        return KittySupport::Remote;
     }
+
     KittySupport::None
 }
 
 // Query the terminal whether it can display an image from a file
-fn has_local_support() -> ViuResult {
-    // create a temp file that will hold a 1x1 image
-    let x = image::RgbaImage::new(1, 1);
-    let raw_img = x.as_raw();
-    let temp_file = store_in_tmp_file(raw_img)?;
-
+fn supports_kitty_protocol(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
     // send the query
-    print!(
-        // t=t tells Kitty it's reading from a temp file and will attempt to delete if afterwards
-        "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
-        general_purpose::STANDARD.encode(
-            temp_file
-                .path()
-                .to_str()
-                .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
-        )
-    );
+    write!(
+        stdout,
+        // the following are 2 queries, the first "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b" is the *query action* to query kitty graphics support
+        // followed by the request for the "primary device attributes" "\x1b[c", both are separated by a "\"
+        // terminals that dont support kitty will only respond to the "primary device attributes" request
+        // whereas terminals that support kitty, will respond to both actions, specifically we are searching for "_Gi=31"
+        "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c",
+    )?;
     std::io::stdout().flush()?;
 
-    // collect Kitty's response after the query
-    let term = Term::stdout();
     let mut response = Vec::new();
 
-    while let Ok(key) = term.read_key() {
+    // determine if we had the "primary device attributes" reply, as otherwise "c" *could* be part of another query response beforehand
+    let mut had_pda = false;
+
+    // assign it once instead of having to allocate a vector with static content in each loop
+    // this sequenece is also called "CSI ? 6" in "Terminal Response" at https://vt100.net/docs/vt510-rm/DA1.html
+    let pda_seq = Key::UnknownEscSeq(['[', '?', '6'].into());
+
+    while let Ok(key) = stdin.read_key() {
+        if key == pda_seq {
+            had_pda = true;
+        }
+
+        // The "primary device attributes" response will end with a "c" character
+        // see "Terminal Response" at https://vt100.net/docs/vt510-rm/DA1.html
+        // Alternatively, terminate on unknown keys, this could for example happen in cargo test with a `console::Term` read_key, for some reason
+        let should_break = (had_pda && key == Key::Char('c')) || key == Key::Unknown;
+
+        response.push(key);
+
+        if should_break {
+            break;
+        }
+    }
+
+    // The Graphics query response
+    let expected = [
+        Key::UnknownEscSeq(['_'].into()),
+        Key::Char('G'),
+        Key::Char('i'),
+        Key::Char('='),
+        Key::Char('3'),
+        Key::Char('1'),
+    ];
+
+    // The Graphics query and the device attributes response could theoretically be in any order
+    // but most terminals will reply in a FIFO order
+    if response.len() >= expected.len() && response[..expected.len()] == expected {
+        return Ok(());
+    }
+
+    Err(ViuError::KittyResponse(response))
+}
+
+/// Close the temporary file that was created, filtering out [`NotFound`](ErrorKind::NotFound) errors.
+fn close_tmp_file(temp_file: NamedTempFile) -> ViuResult {
+    // Explicitly clean up when finished with the file because destructor, OS and Kitty are not deterministic.
+    if let Err(err) = temp_file.close() {
+        // Proper Kitty terminals *will delete* the file after fully reading it, if it is in a known temporary directory
+        // so we dont want to error if the file does not exist anymore
+        if err.kind() != ErrorKind::NotFound {
+            return Err(err.into());
+        }
+    }
+
+    Ok(())
+}
+
+/// Wait for the common "OK" response until returning.
+fn wait_for_ok(stdin: &impl ReadKey) -> ViuResult {
+    let mut response = Vec::new();
+
+    while let Ok(key) = stdin.read_key() {
         // The response will end with Esc('x1b'), followed by Backslash('\').
         // Also, break if the Unknown key is found, which is returned when we're not in a tty
+        // https://sw.kovidgoyal.net/kitty/graphics-protocol/#display-images-on-screen
         let should_break = key == Key::UnknownEscSeq(vec!['\\']) || key == Key::Unknown;
         response.push(key);
         if should_break {
             break;
         }
     }
-
-    // Explicitly clean up when finished with the file because destructor, OS and Kitty are not deterministic.
-    temp_file.close()?;
 
     // Kitty response should end with these 3 Keys if it was successful
     let expected = [
@@ -119,10 +175,39 @@ fn has_local_support() -> ViuResult {
     Err(ViuError::KittyResponse(response))
 }
 
+/// Query the terminal whether it can display an image from a file
+fn has_local_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
+    // create a temp file that will hold a 1x1 image
+    let x = image::RgbaImage::new(1, 1);
+    let raw_img = x.as_raw();
+    let temp_file = store_in_tmp_file(raw_img)?;
+
+    // send the query
+    write!(
+        stdout,
+        // t=t tells Kitty it's reading from a temp file and will attempt to delete if afterwards
+        "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
+        general_purpose::STANDARD.encode(
+            temp_file
+                .path()
+                .to_str()
+                .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
+        )
+    )?;
+    std::io::stdout().flush()?;
+
+    wait_for_ok(stdin)?;
+
+    close_tmp_file(temp_file)?;
+
+    Ok(())
+}
+
 // Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
 fn print_local(
     stdout: &mut impl Write,
+    stdin: &impl ReadKey,
     img: &image::DynamicImage,
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
@@ -137,7 +222,7 @@ fn print_local(
 
     write!(
         stdout,
-        "\x1b_Gf=32,s={},v={},c={},r={},a=T,t=t;{}\x1b\\",
+        "\x1b_Gf=32,s={},v={},c={},r={},a=T,i=10,t=t;{}\x1b\\",
         img.width(),
         img.height(),
         w,
@@ -152,8 +237,9 @@ fn print_local(
     writeln!(stdout)?;
     stdout.flush()?;
 
-    // Explicitly clean up when finished with the file because destructor, OS and Kitty are not deterministic.
-    temp_file.close()?;
+    wait_for_ok(stdin)?;
+
+    close_tmp_file(temp_file)?;
 
     Ok((w, h))
 }
@@ -162,6 +248,7 @@ fn print_local(
 // TODO: try compression
 fn print_remote(
     stdout: &mut impl Write,
+    stdin: &impl ReadKey,
     img: &image::DynamicImage,
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
@@ -179,7 +266,7 @@ fn print_remote(
     // write the first chunk, which describes the image
     write!(
         stdout,
-        "\x1b_Gf=32,a=T,t=d,s={},v={},c={},r={},m=1;{}\x1b\\",
+        "\x1b_Gf=32,a=T,t=d,s={},v={},c={},r={},i=10,m=1;{}\x1b\\",
         img.width(),
         img.height(),
         w,
@@ -195,6 +282,9 @@ fn print_remote(
     }
     writeln!(stdout)?;
     stdout.flush()?;
+
+    wait_for_ok(stdin)?;
+
     Ok((w, h))
 }
 
@@ -213,6 +303,8 @@ fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<NamedTempFile, ViuError>
 
 #[cfg(test)]
 mod tests {
+    use crate::printer::TestKeys;
+
     use super::*;
     use image::{DynamicImage, GenericImage};
 
@@ -226,11 +318,30 @@ mod tests {
         };
 
         let mut vec = Vec::new();
-        assert_eq!(print_local(&mut vec, &img, &config).unwrap(), (40, 13));
+
+        let test_data = [
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('1'),
+            Key::Char('0'),
+            Key::Char(';'),
+            Key::Char('O'),
+            Key::Char('K'),
+            Key::UnknownEscSeq(['\\'].into()),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        assert_eq!(
+            print_local(&mut vec, &test_response, &img, &config).unwrap(),
+            (40, 13)
+        );
         let result = std::str::from_utf8(&vec).unwrap();
 
-        assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,t=t;"));
+        assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,i=10,t=t;"));
         assert!(result.ends_with("\x1b\\\n"));
+        assert!(test_response.reached_end());
     }
 
     #[test]
@@ -245,12 +356,117 @@ mod tests {
         };
 
         let mut vec = Vec::new();
-        assert_eq!(print_remote(&mut vec, &img, &config).unwrap(), (1, 1));
+
+        let test_data = [
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('1'),
+            Key::Char('0'),
+            Key::Char(';'),
+            Key::Char('O'),
+            Key::Char('K'),
+            Key::UnknownEscSeq(['\\'].into()),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        assert_eq!(
+            print_remote(&mut vec, &test_response, &img, &config).unwrap(),
+            (1, 1)
+        );
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert_eq!(
             result,
-            "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,m=1;AAAAAAIEBgg=\x1b\\\n"
+            "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,i=10,m=1;AAAAAAIEBgg=\x1b\\\n"
         );
+        assert!(test_response.reached_end());
+    }
+
+    #[test]
+    fn test_kitty_supported_but_not_remote() {
+        // test kitty protocol support
+        let mut stdout = Vec::new();
+
+        let test_data = [
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('3'),
+            Key::Char('1'),
+            Key::Char(';'),
+            Key::Char('O'),
+            Key::Char('K'),
+            Key::UnknownEscSeq(['\\'].into()),
+            Key::UnknownEscSeq(['[', '?', '6'].into()),
+            Key::Char('2'),
+            Key::Char(';'),
+            Key::Char('1'),
+            Key::Char(';'),
+            Key::Char('4'),
+            Key::Char('c'),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        supports_kitty_protocol(&mut stdout, &test_response).unwrap();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        assert_eq!(result, "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c");
+        assert!(test_response.reached_end());
+
+        stdout.clear();
+
+        // test kitty local protocol support
+        let mut stdout = Vec::new();
+
+        let test_data = [
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('3'),
+            Key::Char('1'),
+            Key::Char(';'),
+            Key::Char('E'),
+            Key::Char('N'),
+            Key::Char('O'),
+            Key::Char('T'),
+            Key::Char('S'),
+            Key::Char('U'),
+            Key::Char('P'),
+            Key::Char('P'),
+            Key::Char('O'),
+            Key::Char('R'),
+            Key::Char('T'),
+            Key::Char('E'),
+            Key::Char('D'),
+            Key::Char(':'),
+            Key::UnknownEscSeq(['\\'].into()),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        has_local_support(&mut stdout, &test_response).unwrap_err();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        assert!(result.starts_with("\x1b_Gi=31,s=1,v=1,a=q,t=t;"));
+        assert!(result.ends_with("\x1b\\"));
+        assert!(test_response.reached_end());
+    }
+
+    #[test]
+    fn test_no_kitty_support() {
+        let mut stdout = Vec::new();
+
+        // only the "primary device attributes"
+        let test_data = [Key::UnknownEscSeq(['[', '?', '6'].into()), Key::Char('c')];
+        let test_response = TestKeys::new(&test_data);
+
+        supports_kitty_protocol(&mut stdout, &test_response).unwrap_err();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        assert_eq!(result, "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c");
+        assert!(test_response.reached_end());
     }
 }

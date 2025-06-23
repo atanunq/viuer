@@ -1,5 +1,5 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
 use crate::Config;
 use console::{Key, Term};
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
@@ -8,6 +8,7 @@ use sixel_rs::optflags::EncodePolicy;
 use std::io::Write;
 use std::sync::LazyLock;
 
+#[derive(Debug, Clone)]
 pub struct SixelPrinter;
 
 static SIXEL_SUPPORT: LazyLock<bool> = LazyLock::new(check_sixel_support);
@@ -21,6 +22,7 @@ impl Printer for SixelPrinter {
     fn print(
         &self,
         stdout: &mut impl Write,
+        _stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
