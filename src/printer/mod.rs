@@ -41,9 +41,18 @@ pub trait Printer {
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
-        let img = image::ImageReader::open(filename)?
-            .with_guessed_format()?
-            .decode()?;
+        let extension = filename
+            .as_ref()
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        let img = match extension {
+            #[cfg(feature = "print-file-svg")]
+            "svg" => try_load_svg_image(filename, config)?,
+            _ => image::ImageReader::open(filename)?
+                .with_guessed_format()?
+                .decode()?,
+        };
         self.print(stdout, &img, config)
     }
 }
@@ -216,6 +225,79 @@ fn adjust_offset(stdout: &mut impl Write, config: &Config) -> ViuResult {
         }
     }
     Ok(())
+}
+
+/// Load an SVG image from a file and convert it to a DynamicImage.
+///
+/// The resolution (in pixels) is determined based on the config:
+/// - If `config.width` and `config.height` are specified, the SVG will be rendered
+///   at that size (in cells) multiplied by `config.svg_pixels_per_cell`
+/// - If not specified, terminal size is used to determine the target size (in cells)
+///   multiplied by `config.svg_pixels_per_cell`
+#[cfg(feature = "print-file-svg")]
+fn try_load_svg_image<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResult<DynamicImage> {
+    let tree = {
+        let mut opt = resvg::usvg::Options::default();
+        opt.fontdb_mut().load_system_fonts();
+
+        let svg_data = std::fs::read(&filename)?;
+
+        resvg::usvg::Tree::from_data(&svg_data, &opt)?
+    };
+
+    // The `resvg` crate guesses the SVG size based on `height`, `width` and `viewBox`
+    // attributes. If none of them are present (or if just the percentages are present),
+    // the SVG size defaults to 100x100.
+    // This resolution can be too low, so we use `config.svg_pixels_per_cell` to determine
+    // the target size in pixels based on the desired resolution in pixels per cell as well as
+    // the desired size in cells (`config.width` and/or `config.height`) or the terminal size.
+    let svg_size = tree.size().to_int_size();
+    let (target_width_cells, target_height_cells) = {
+        // Create a dummy image with the SVG's dimensions to use find_best_fit.
+        // If the signature of `find_best_fit` is changed to width and height
+        // instead of img, dummy image can be removed.
+        let dummy_img =
+            DynamicImage::ImageRgba8(image::RgbaImage::new(svg_size.width(), svg_size.height()));
+        find_best_fit(&dummy_img, config.width, config.height)
+    };
+
+    // Determine the image size in pixels from the target size in cells and `svg_pixels_per_cell`
+    let pixels_per_cell = config.svg_pixels_per_cell as u32;
+    let target_width_px = target_width_cells * pixels_per_cell;
+    let target_height_px = target_height_cells * 2 * pixels_per_cell;
+
+    // Since `find_best_fit` slightly distorts the aspect ratio, use scale to restore it
+    let scale_x = target_width_px as f32 / svg_size.width() as f32;
+    let scale_y = target_height_px as f32 / svg_size.height() as f32;
+    let scale = scale_x.min(scale_y);
+    let target_width_px = (svg_size.width() as f32 * scale) as u32;
+    let target_height_px = (svg_size.height() as f32 * scale) as u32;
+
+    // Create pixmap with the calculated dimensions
+    let mut pixmap =
+        resvg::tiny_skia::Pixmap::new(target_width_px, target_height_px).ok_or_else(|| {
+            ViuError::SVGProcessingError("Failed to create pixmap for SVG".to_owned())
+        })?;
+
+    // Render the SVG into the pixmap
+    resvg::render(
+        &tree,
+        resvg::tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
+
+    // Convert the pixmap data to a DynamicImage
+    let rgba = pixmap.data().to_vec();
+    let img = DynamicImage::ImageRgba8(
+        image::RgbaImage::from_raw(target_width_px, target_height_px, rgba).ok_or_else(|| {
+            ViuError::SVGProcessingError(format!(
+                "Failed to convert SVG to image (dimensions: {}x{})",
+                target_width_px, target_height_px
+            ))
+        })?,
+    );
+
+    Ok(img)
 }
 
 #[cfg(test)]

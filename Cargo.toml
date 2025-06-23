@@ -22,6 +22,7 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 tempfile = "3"
 termcolor = "1"
 sixel-rs = { version = "0.5", optional = true}
+resvg = { version = "0.45.1", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 crossterm = { version = "0.29", default-features = false, features = ["windows"]}
@@ -30,7 +31,7 @@ crossterm = { version = "0.29", default-features = false, features = ["windows"]
 default = []
 sixel = ["sixel-rs"]
 print-file = ["image/default-formats"] # Hide file printing behind a flag because it adds heavy dependencies.
-
+print-file-svg = ["print-file", "resvg"] # SVG support requires print-file and resvg dependency.
 
 [package.metadata.docs.rs]
 # Show all methods in the documentation, even the non-default ones.

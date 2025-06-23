@@ -1,6 +1,7 @@
 ## next
 - remove `lazy_static` dependency in favor of `std::sync::LazyLock`
 - MSRV is now 1.80
+- Add SVG rendering support under the `print-file-svg` feature flag
 
 ## 0.9.2
 - Use iterm and sixel in more terminals

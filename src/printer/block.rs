@@ -37,7 +37,15 @@ fn print_to_writecolor(
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
     // adjust with x=0 and handle horizontal offset entirely below
-    adjust_offset(stdout, &Config { x: 0, ..*config })?;
+    adjust_offset(
+        stdout,
+        &Config {
+            x: 0,
+            #[cfg(feature = "print-file-svg")]
+            svg_pixels_per_cell: 1,
+            ..*config
+        },
+    )?;
 
     // resize the image so that it fits in the constraints, if any
     let img = super::resize(img, config.width, config.height);

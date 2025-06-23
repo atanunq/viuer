@@ -19,6 +19,9 @@ pub enum ViuError {
     /// Error while printing with sixel
     #[cfg(feature = "sixel")]
     SixelError(sixel_rs::status::Error),
+    /// Error with SVG processing
+    #[cfg(feature = "print-file-svg")]
+    SVGProcessingError(String),
 }
 
 impl std::error::Error for ViuError {}
@@ -47,6 +50,13 @@ impl From<sixel_rs::status::Error> for ViuError {
     }
 }
 
+#[cfg(feature = "print-file-svg")]
+impl From<resvg::usvg::Error> for ViuError {
+    fn from(err: resvg::usvg::Error) -> Self {
+        ViuError::SVGProcessingError(format!("SVG parsing error: {}", err))
+    }
+}
+
 impl std::fmt::Display for ViuError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -58,6 +68,8 @@ impl std::fmt::Display for ViuError {
             ViuError::KittyNotSupported => write!(f, "Kitty graphics protocol not supported"),
             #[cfg(feature = "sixel")]
             ViuError::SixelError(e) => write!(f, "Sixel error: {:?}", e),
+            #[cfg(feature = "print-file-svg")]
+            ViuError::SVGProcessingError(s) => write!(f, "{}", s),
         }
     }
 }

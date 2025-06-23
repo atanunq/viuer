@@ -34,6 +34,9 @@ pub struct Config {
     /// Use Sixel protocol if the terminal supports it. Defaults to true.
     #[cfg(feature = "sixel")]
     pub use_sixel: bool,
+    /// Pixels per terminal cell for SVG rendering. Defaults to 16.
+    #[cfg(feature = "print-file-svg")]
+    pub svg_pixels_per_cell: u8,
 }
 
 impl std::default::Default for Config {
@@ -52,6 +55,8 @@ impl std::default::Default for Config {
             use_iterm: true,
             #[cfg(feature = "sixel")]
             use_sixel: true,
+            #[cfg(feature = "print-file-svg")]
+            svg_pixels_per_cell: 16,
         }
     }
 }
