@@ -1,17 +1,24 @@
+mod maskers;
+pub(crate) mod masks;
+
 use crate::error::ViuResult;
 use crate::printer::{adjust_offset, Printer};
 use crate::Config;
 
 use ansi_colours::ansi256_from_rgb;
-use image::{DynamicImage, GenericImageView, Rgba};
+use image::{DynamicImage, GenericImage, GenericImageView, ImageBuffer, Rgba};
 use std::io::Write;
 use termcolor::{BufferedStandardStream, Color, ColorChoice, ColorSpec, WriteColor};
 
 use crossterm::cursor::MoveRight;
 use crossterm::execute;
+use crate::printer::block::masks::{choose_mask_and_colors, get_all_masks, SUBPIXEL64_COLUMNS, SUBPIXEL64_ROWS};
+
 
 const UPPER_HALF_BLOCK: &str = "\u{2580}";
+const UPPER_HALF_BLOCK_CHAR: char = '\u{2580}';
 const LOWER_HALF_BLOCK: &str = "\u{2584}";
+const LOWER_HALF_BLOCK_CHAR: char = '\u{2584}';
 
 const CHECKERBOARD_BACKGROUND_LIGHT: (u8, u8, u8) = (153, 153, 153);
 const CHECKERBOARD_BACKGROUND_DARK: (u8, u8, u8) = (102, 102, 102);
@@ -27,8 +34,100 @@ impl Printer for BlockPrinter {
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         let mut stream = BufferedStandardStream::stdout(ColorChoice::Always);
-        print_to_writecolor(&mut stream, img, config)
+        if config.sub_blocks {
+            print_with_add_blocks(&mut stream, img, config)
+        } else {
+            print_to_writecolor(&mut stream, img, config)
+        }
     }
+}
+
+fn print_with_add_blocks(
+    stdout: &mut impl WriteColor,
+    img: &DynamicImage,
+    config: &Config
+) -> ViuResult<(u32, u32)> {
+
+    // resize the image so that it fits in the constraints, if any
+    let img8 = super::resize8(img, config.width, config.height);
+    let (s_width, s_height) = img8.dimensions();
+
+    let img1 = super::resize(img, config.width, config.height);
+    let (width, height) = img1.dimensions();
+
+    if (s_width, s_height) != (width * SUBPIXEL64_COLUMNS, height * SUBPIXEL64_COLUMNS) {
+        panic!("unable to scale image properly");
+        // return print_to_writecolor(stdout, img, config);
+    }
+
+    // adjust with x=0 and handle horizontal offset entirely below
+    adjust_offset(stdout, &Config { x: 0, ..*config })?;
+
+    let img1_buffer = img1.to_rgba8();
+    let img8_buffer = img8.to_rgba8();
+
+    let get_color = |(row,col,color)| if is_pixel_transparent((row,col,color)) {
+        if config.transparent {
+            None
+        } else {
+            Some(transparency_color(row, col, config.truecolor))
+        }
+    } else {
+        Some(if config.truecolor {
+            Color::Rgb(color[0], color[1], color[2])
+        } else {
+            Color::Ansi256(ansi256_from_rgb((color[0], color[1], color[2])))
+        })
+    };
+    let mask_cache = get_all_masks();
+
+    for y in (0..height).step_by(2) {
+        let is_last_row = y == height - 1;
+        if config.x > 0 {
+            execute!(stdout, MoveRight(config.x))?;
+        }
+        for x in 0..width {
+            let mut write_default = true;
+            if !is_last_row {
+                if let Some((mask, fg_col, bg_col)) = choose_mask_and_colors(&mask_cache, (x * SUBPIXEL64_COLUMNS, y * SUBPIXEL64_COLUMNS), &img8_buffer, config) {
+                    let mut colorspec = ColorSpec::new();
+                    match (fg_col, bg_col) {
+                        (None, Some(bg)) => {
+                            colorspec.set_fg(Some(bg));
+                            colorspec.set_bg(None);
+                        }
+                        _ => {
+                            colorspec.set_bg(bg_col);
+                            colorspec.set_fg(fg_col);
+                        }
+                    }
+                    write_custom_colored_character(stdout, &colorspec, is_last_row, mask.char)?;
+                    write_default = false;
+                }
+            }
+            if write_default {
+                if is_last_row {
+                    let mut colorspec = ColorSpec::new();
+                    let top = img1_buffer.get_pixel(x, y);
+                    colorspec.set_bg(get_color((y, x, top)));
+                    write_colored_character(stdout, &colorspec, is_last_row)?;
+                } else {
+                    let mut colorspec = ColorSpec::new();
+                    let top = img1_buffer.get_pixel(x, y);
+                    let bottom = img1_buffer.get_pixel(x, y + 1);
+                    colorspec.set_bg(get_color((y, x, top)));
+                    colorspec.set_fg(get_color((y, x, bottom)));
+                    write_colored_character(stdout, &colorspec, is_last_row)?;
+                }
+            }
+        }
+        stdout.reset()?;
+        writeln!(stdout, "\r")?;
+    }
+    stdout.reset()?;
+    writeln!(stdout)?;
+    stdout.flush()?;
+    Ok((width, height / 2 + height % 2))
 }
 
 fn print_to_writecolor(
@@ -99,16 +198,23 @@ fn write_colored_character(
     c: &ColorSpec,
     is_last_row: bool,
 ) -> ViuResult {
+    write_custom_colored_character(stdout, c, is_last_row, LOWER_HALF_BLOCK_CHAR)
+}
+fn write_custom_colored_character(
+    stdout: &mut impl WriteColor,
+    c: &ColorSpec,
+    is_last_row: bool,
+    character: char,
+) -> ViuResult {
     let out_color;
-    let out_char;
     let mut new_color;
-
+    let mut out_char;
     // On the last row use upper blocks and leave the bottom half empty (transparent)
     if is_last_row {
         new_color = ColorSpec::new();
         if let Some(bg) = c.bg() {
             new_color.set_fg(Some(*bg));
-            out_char = UPPER_HALF_BLOCK;
+            out_char = UPPER_HALF_BLOCK_CHAR;
         } else {
             execute!(stdout, MoveRight(1))?;
             return Ok(());
@@ -126,19 +232,19 @@ fn write_colored_character(
                 new_color = ColorSpec::new();
                 new_color.set_fg(Some(*bottom));
                 out_color = &new_color;
-                out_char = LOWER_HALF_BLOCK;
+                out_char = LOWER_HALF_BLOCK_CHAR;
             }
             (None, Some(top)) => {
                 // only bottom transparent
                 new_color = ColorSpec::new();
                 new_color.set_fg(Some(*top));
                 out_color = &new_color;
-                out_char = UPPER_HALF_BLOCK;
+                out_char = UPPER_HALF_BLOCK_CHAR;
             }
             (Some(_top), Some(_bottom)) => {
                 // both parts have a color
                 out_color = c;
-                out_char = LOWER_HALF_BLOCK;
+                out_char = character;
             }
         }
     }
@@ -223,9 +329,9 @@ fn color_from_pixel(row: u32, pixel: (u32, u32, &Rgba<u8>), config: &Config) -> 
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
     use super::*;
     use termcolor::{Ansi, Color};
-
     // Note: truecolor is not supported in CI. Hence, it should be disabled when writing the tests
 
     #[test]
@@ -367,5 +473,26 @@ mod tests {
         let mut buf = Ansi::new(vec![]);
         write_colored_character(&mut buf, &c, true).unwrap();
         assert_eq!(std::str::from_utf8(buf.get_ref()).unwrap(), "\x1b[1C");
+    }
+
+    // test print the smiley
+    // cargo test --color=always --package viuer --lib printer::block::tests --no-fail-fast
+    #[test]
+    fn test_write_img() {
+        let make_conf = |x, y, width, height, sub_blocks: bool, t: bool| Config {
+            x, y, sub_blocks, transparent: t,
+            width: Some(width), height: Some(height),
+            ..Default::default()
+        };
+        let height = 30;
+        let width = 2 * height;
+        let a_conf = make_conf(0, 0, width, height, false, false);
+        let b_conf = make_conf(width as u16, 0, width, height, true, false);
+        let img = image::ImageReader::open("pancake.png").unwrap()
+            .with_guessed_format().unwrap()
+            .decode().unwrap();
+        let mut stream = BufferedStandardStream::stdout(ColorChoice::Always);
+        BlockPrinter.print(&mut stream, &img, &a_conf).expect("Image printing failed.");
+        BlockPrinter.print(&mut stream, &img, &b_conf).expect("Image printing failed.");
     }
 }
