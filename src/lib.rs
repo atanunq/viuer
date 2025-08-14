@@ -70,6 +70,8 @@ pub use utils::terminal_size;
 #[cfg(feature = "sixel")]
 pub use printer::is_sixel_supported;
 
+use crate::utils::is_term_vscode;
+
 /// Default printing method. Uses either iTerm or Kitty graphics protocol, if supported,
 /// and half blocks otherwise.
 ///
@@ -146,7 +148,7 @@ fn choose_printer(config: &Config) -> PrinterType {
         return PrinterType::Sixel;
     }
 
-    if config.use_iterm && is_iterm_supported() {
+    if config.use_iterm && (is_iterm_supported() || (config.allow_vscode && is_term_vscode())) {
         PrinterType::iTerm
     } else if config.use_kitty && get_kitty_support() != KittySupport::None {
         PrinterType::Kitty

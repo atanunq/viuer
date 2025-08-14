@@ -10,6 +10,10 @@ pub fn truecolor_available() -> bool {
     }
 }
 
+pub fn is_term_vscode() -> bool {
+    std::env::var("TERM_PROGRAM").is_ok_and(|term| term == "vscode")
+}
+
 /// Try to get the terminal size. If unsuccessful, fallback to a default (80x24). Uses [crossterm::terminal::size].
 #[cfg(not(test))]
 pub fn terminal_size() -> (u16, u16) {
