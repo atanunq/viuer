@@ -31,6 +31,11 @@ pub struct Config {
     pub use_kitty: bool,
     /// Use iTerm protocol if the terminal supports it. Defaults to true.
     pub use_iterm: bool,
+    /// Use Iterm to display images in VScode. Defaults to false, and will display using lower half blocks instead.
+    /// 
+    /// While VSCode supports the iTerm protocol, it is currently opt-in in the app's settings. 
+    /// If an image is displayed using ITerm and VScode isn't configuarted to display it, nothing will print, so use carefully.
+    pub allow_vscode: bool,
     /// Use Sixel protocol if the terminal supports it. Defaults to true.
     #[cfg(feature = "sixel")]
     pub use_sixel: bool,
@@ -50,6 +55,7 @@ impl std::default::Default for Config {
             truecolor: utils::truecolor_available(),
             use_kitty: true,
             use_iterm: true,
+            allow_vscode: false,
             #[cfg(feature = "sixel")]
             use_sixel: true,
         }
