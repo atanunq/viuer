@@ -72,7 +72,12 @@ fn print_buffer(
 ) -> ViuResult<(u32, u32)> {
     adjust_offset(stdout, config)?;
 
-    let (w, h) = find_best_fit(img, config.width, config.height);
+    let (w, h) = find_best_fit(
+        img,
+        config.width,
+        config.height,
+        config.preserve_aspect_ratio,
+    );
 
     writeln!(
         stdout,
