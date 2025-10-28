@@ -1,3 +1,12 @@
+## next
+- remove `lazy_static` dependency in favor of `std::sync::LazyLock`
+- MSRV is now 1.80
+- Use sixel if found in device attributes instead of static TERM list
+
+## 0.9.2
+- Use iterm and sixel in more terminals
+- Bump `crossterm` and `sixel-rs` dependencies
+
 ## 0.9.1
 - Add docs.rs metadata
 

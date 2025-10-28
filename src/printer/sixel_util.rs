@@ -1,11 +1,9 @@
+use crate::ViuResult;
 use console::{Key, Term};
 use lazy_static::lazy_static;
 use std::io::Write;
-use crate::ViuResult;
 
-lazy_static! {
-    static ref SIXEL_SUPPORT: bool = check_sixel_support();
-}
+static SIXEL_SUPPORT: LazyLock<bool> = LazyLock::new(check_sixel_support);
 
 /// Returns the terminal's support for Sixel.
 pub fn is_sixel_supported() -> bool {
@@ -24,6 +22,11 @@ fn check_device_attrs() -> ViuResult<bool> {
     let mut response = String::new();
 
     while let Ok(key) = term.read_key() {
+        // exit on first "Unknown" key as we know that this is not a proper response anymore
+        if key == Key::Unknown {
+            break;
+        }
+
         if let Key::Char(c) = key {
             response.push(c);
             if c == 'c' {
@@ -39,25 +42,18 @@ fn check_device_attrs() -> ViuResult<bool> {
 fn check_sixel_support() -> bool {
     if let Ok(term) = std::env::var("TERM") {
         match term.as_str() {
-            "mlterm" | "yaft-256color" | "foot" | "foot-extra" | "eat-truecolor" | "rio" => {
+            "yaft-256color" | "eat-truecolor" => {
                 return true;
-            },
-            "st-256color" | "xterm" | "xterm-256color" => {
-                return check_device_attrs().unwrap_or(false);
-            },
+            }
             _ => {
                 if let Ok(term_program) = std::env::var("TERM_PROGRAM") {
-                    return term_program == "MacTerm";
+                    if term_program == "MacTerm" {
+                        return true;
+                    }
                 }
             }
         }
+        return check_device_attrs().unwrap_or(false);
     }
-
-    // Windows terminal.
-    #[cfg(feature = "icy_sixel")]
-    if let Ok(_guid) = std::env::var("WT_SESSION") {
-        return true;
-    }
-
     false
 }

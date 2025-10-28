@@ -3,17 +3,15 @@ use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
-use lazy_static::lazy_static;
+use std::io::Error;
 use std::io::Write;
-use std::io::{Error, ErrorKind};
+use std::sync::LazyLock;
 use tempfile::NamedTempFile;
 
 pub struct KittyPrinter;
 
 const TEMP_FILE_PREFIX: &str = ".tty-graphics-protocol.viuer.";
-lazy_static! {
-    static ref KITTY_SUPPORT: KittySupport = check_kitty_support();
-}
+static KITTY_SUPPORT: LazyLock<KittySupport> = LazyLock::new(check_kitty_support);
 
 /// Returns the terminal's support for the Kitty graphics protocol.
 pub fn get_kitty_support() -> KittySupport {
@@ -81,9 +79,12 @@ fn has_local_support() -> ViuResult {
     print!(
         // t=t tells Kitty it's reading from a temp file and will attempt to delete if afterwards
         "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
-        general_purpose::STANDARD.encode(temp_file.path().to_str().ok_or_else(|| ViuError::Io(
-            Error::new(ErrorKind::Other, "Could not convert path to &str")
-        ))?)
+        general_purpose::STANDARD.encode(
+            temp_file
+                .path()
+                .to_str()
+                .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
+        )
     );
     std::io::stdout().flush()?;
 
@@ -141,9 +142,12 @@ fn print_local(
         img.height(),
         w,
         h,
-        general_purpose::STANDARD.encode(temp_file.path().to_str().ok_or_else(|| ViuError::Io(
-            Error::new(ErrorKind::Other, "Could not convert path to &str")
-        ))?)
+        general_purpose::STANDARD.encode(
+            temp_file
+                .path()
+                .to_str()
+                .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
+        )
     )?;
     writeln!(stdout)?;
     stdout.flush()?;

@@ -3,8 +3,8 @@ use crate::printer::{adjust_offset, find_best_fit, Printer};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, GenericImageView, ImageEncoder};
-use lazy_static::lazy_static;
 use std::io::Write;
+use std::sync::LazyLock;
 
 #[cfg(feature = "print-file")]
 use std::{
@@ -15,9 +15,7 @@ use std::{
 #[allow(non_camel_case_types)]
 pub struct iTermPrinter;
 
-lazy_static! {
-    static ref ITERM_SUPPORT: bool = check_iterm_support();
-}
+static ITERM_SUPPORT: LazyLock<bool> = LazyLock::new(check_iterm_support);
 
 /// Returns the terminal's support for the iTerm graphics protocol.
 pub fn is_iterm_supported() -> bool {
@@ -96,6 +94,7 @@ fn check_iterm_support() -> bool {
             || term.contains("WezTerm")
             || term.contains("mintty")
             || term.contains("rio")
+            || term.contains("WarpTerminal")
         {
             return true;
         }

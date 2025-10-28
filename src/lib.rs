@@ -1,4 +1,6 @@
 #![deny(missing_docs)]
+// Temporary until https://github.com/rust-lang/rust-clippy/issues/15151 is rolled out
+#![allow(clippy::uninlined_format_args)]
 
 //! Library to display images in the terminal.
 //!
