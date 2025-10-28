@@ -18,7 +18,17 @@ pub use kitty::{get_kitty_support, KittyPrinter, KittySupport};
 #[cfg(feature = "sixel")]
 mod sixel;
 #[cfg(feature = "sixel")]
-pub use self::sixel::{is_sixel_supported, SixelPrinter};
+pub use self::sixel::SixelPrinter;
+
+#[cfg(feature = "icy_sixel")]
+mod icy_sixel;
+#[cfg(feature = "icy_sixel")]
+pub use self::icy_sixel::IcySixelPrinter;
+
+#[cfg(any(feature = "sixel", feature = "icy_sixel"))]
+mod sixel_util;
+#[cfg(any(feature = "sixel", feature = "icy_sixel"))]
+pub use self::sixel_util::is_sixel_supported;
 
 mod iterm;
 pub use iterm::iTermPrinter;
@@ -55,6 +65,8 @@ pub enum PrinterType {
     iTerm,
     #[cfg(feature = "sixel")]
     Sixel,
+    #[cfg(feature = "icy_sixel")]
+    IcySixel,
 }
 
 impl Printer for PrinterType {
@@ -70,6 +82,8 @@ impl Printer for PrinterType {
             PrinterType::iTerm => iTermPrinter.print(stdout, img, config),
             #[cfg(feature = "sixel")]
             PrinterType::Sixel => SixelPrinter.print(stdout, img, config),
+            #[cfg(feature = "icy_sixel")]
+            PrinterType::IcySixel => IcySixelPrinter.print(stdout, img, config),
         }
     }
 
@@ -86,6 +100,8 @@ impl Printer for PrinterType {
             PrinterType::iTerm => iTermPrinter.print_from_file(stdout, filename, config),
             #[cfg(feature = "sixel")]
             PrinterType::Sixel => SixelPrinter.print_from_file(stdout, filename, config),
+            #[cfg(feature = "icy_sixel")]
+            PrinterType::IcySixel => IcySixelPrinter.print_from_file(stdout, filename, config),
         }
     }
 }
