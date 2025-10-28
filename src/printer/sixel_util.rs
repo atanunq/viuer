@@ -1,7 +1,7 @@
 use crate::ViuResult;
 use console::{Key, Term};
-use lazy_static::lazy_static;
 use std::io::Write;
+use std::sync::LazyLock;
 
 static SIXEL_SUPPORT: LazyLock<bool> = LazyLock::new(check_sixel_support);
 

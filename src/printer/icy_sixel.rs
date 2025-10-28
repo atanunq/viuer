@@ -1,6 +1,6 @@
+use super::{adjust_offset, find_best_fit, Printer};
 use icy_sixel::sixel_string;
 use image::{imageops::FilterType, GenericImageView};
-use super::{adjust_offset, find_best_fit, Printer};
 
 pub struct IcySixelPrinter;
 
@@ -11,7 +11,6 @@ impl Printer for IcySixelPrinter {
         img: &image::DynamicImage,
         config: &crate::Config,
     ) -> crate::ViuResult<(u32, u32)> {
-
         let (w, h) = find_best_fit(img, config.width, config.height);
 
         //TODO: the max 1000 width is an xterm bug workaround, other terminals may not be affected
@@ -33,16 +32,14 @@ impl Printer for IcySixelPrinter {
             icy_sixel::DiffusionMethod::Auto,
             icy_sixel::MethodForLargest::Auto,
             icy_sixel::MethodForRep::Auto,
-            icy_sixel::Quality::AUTO)
-        {
+            icy_sixel::Quality::AUTO,
+        ) {
             Ok(output) => {
                 write!(stdout, "{output}")?;
                 stdout.flush()?;
                 Ok((w, h))
-            },
-            Err(error) => {
-                Err(crate::ViuError::IcySixelError(format!("{error}")))
             }
+            Err(error) => Err(crate::ViuError::IcySixelError(format!("{error}"))),
         }
     }
 }
