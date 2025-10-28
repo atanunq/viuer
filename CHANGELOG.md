@@ -1,5 +1,6 @@
 ## next
-- remove `lazy_static` dependency in favor of `std::sync::LazyLock`
+- Add `icy_sixel` feature that uses a Rust implementation of Sixel
+- Remove `lazy_static` dependency in favor of `std::sync::LazyLock`
 - MSRV is now 1.80
 - Use sixel if found in device attributes instead of static TERM list
 
