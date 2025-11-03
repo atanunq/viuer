@@ -15,14 +15,14 @@ pub use block::BlockPrinter;
 mod kitty;
 pub use kitty::{get_kitty_support, KittyPrinter, KittySupport};
 
-#[cfg(feature = "sixel")]
+#[cfg(all(feature = "sixel", not(windows)))]
 mod sixel;
-#[cfg(feature = "sixel")]
+#[cfg(all(feature = "sixel", not(windows)))]
 pub use self::sixel::SixelPrinter;
 
-#[cfg(feature = "icy_sixel")]
+#[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
 mod icy_sixel;
-#[cfg(feature = "icy_sixel")]
+#[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
 pub use self::icy_sixel::IcySixelPrinter;
 
 #[cfg(any(feature = "sixel", feature = "icy_sixel"))]
@@ -63,9 +63,9 @@ pub enum PrinterType {
     Block,
     Kitty,
     iTerm,
-    #[cfg(feature = "sixel")]
+    #[cfg(all(feature = "sixel", not(windows)))]
     Sixel,
-    #[cfg(feature = "icy_sixel")]
+    #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
     IcySixel,
 }
 
@@ -80,9 +80,9 @@ impl Printer for PrinterType {
             PrinterType::Block => BlockPrinter.print(stdout, img, config),
             PrinterType::Kitty => KittyPrinter.print(stdout, img, config),
             PrinterType::iTerm => iTermPrinter.print(stdout, img, config),
-            #[cfg(feature = "sixel")]
+            #[cfg(all(feature = "sixel", not(windows)))]
             PrinterType::Sixel => SixelPrinter.print(stdout, img, config),
-            #[cfg(feature = "icy_sixel")]
+            #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
             PrinterType::IcySixel => IcySixelPrinter.print(stdout, img, config),
         }
     }
@@ -98,9 +98,9 @@ impl Printer for PrinterType {
             PrinterType::Block => BlockPrinter.print_from_file(stdout, filename, config),
             PrinterType::Kitty => KittyPrinter.print_from_file(stdout, filename, config),
             PrinterType::iTerm => iTermPrinter.print_from_file(stdout, filename, config),
-            #[cfg(feature = "sixel")]
+            #[cfg(all(feature = "sixel", not(windows)))]
             PrinterType::Sixel => SixelPrinter.print_from_file(stdout, filename, config),
-            #[cfg(feature = "icy_sixel")]
+            #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
             PrinterType::IcySixel => IcySixelPrinter.print_from_file(stdout, filename, config),
         }
     }
