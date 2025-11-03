@@ -53,7 +53,6 @@ fn check_sixel_support() -> bool {
                 }
             }
         }
-        return check_device_attrs().unwrap_or(false);
     }
-    false
+    check_device_attrs().unwrap_or(false)
 }
