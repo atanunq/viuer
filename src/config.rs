@@ -33,7 +33,7 @@ pub struct Config {
     /// Use iTerm protocol if the terminal supports it. Defaults to true.
     pub use_iterm: bool,
     /// Use Sixel protocol if the terminal supports it. Defaults to true.
-    #[cfg(feature = "sixel")]
+    #[cfg(any(feature = "sixel", feature = "icy_sixel"))]
     pub use_sixel: bool,
 }
 
@@ -51,7 +51,7 @@ impl std::default::Default for Config {
             truecolor: utils::truecolor_available(),
             use_kitty: true,
             use_iterm: true,
-            #[cfg(feature = "sixel")]
+            #[cfg(any(feature = "sixel", feature = "icy_sixel"))]
             use_sixel: true,
         }
     }
