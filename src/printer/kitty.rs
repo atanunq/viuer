@@ -60,7 +60,9 @@ pub enum KittySupport {
 fn check_kitty_support() -> KittySupport {
     if let Ok(term) = std::env::var("TERM") {
         if term.contains("kitty") || term.contains("ghostty") {
-            if has_local_support().is_ok() {
+            let mut stdout = std::io::stdout();
+            let stdin = Term::stdout();
+            if has_local_support(&mut stdout, &stdin).is_ok() {
                 return KittySupport::Local;
             }
 
@@ -71,14 +73,15 @@ fn check_kitty_support() -> KittySupport {
 }
 
 // Query the terminal whether it can display an image from a file
-fn has_local_support() -> ViuResult {
+fn has_local_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
     // create a temp file that will hold a 1x1 image
     let x = image::RgbaImage::new(1, 1);
     let raw_img = x.as_raw();
     let temp_file = store_in_tmp_file(raw_img)?;
 
     // send the query
-    print!(
+    write!(
+        stdout,
         // t=t tells Kitty it's reading from a temp file and will attempt to delete if afterwards
         "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
         general_purpose::STANDARD.encode(
@@ -87,14 +90,13 @@ fn has_local_support() -> ViuResult {
                 .to_str()
                 .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
         )
-    );
-    std::io::stdout().flush()?;
+    )?;
+    stdout.flush()?;
 
     // collect Kitty's response after the query
-    let term = Term::stdout();
     let mut response = Vec::new();
 
-    while let Ok(key) = term.read_key() {
+    while let Ok(key) = stdin.read_key() {
         // The response will end with Esc('x1b'), followed by Backslash('\').
         // Also, break if the Unknown key is found, which is returned when we're not in a tty
         let should_break = key == Key::UnknownEscSeq(vec!['\\']) || key == Key::Unknown;
