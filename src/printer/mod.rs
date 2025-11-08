@@ -59,7 +59,7 @@ pub trait Printer {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum PrinterType {
     Block,
     Kitty,
