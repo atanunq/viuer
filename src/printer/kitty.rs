@@ -277,4 +277,35 @@ mod tests {
         );
         assert!(test_response.reached_end());
     }
+
+    #[test]
+    fn test_kitty_protocol_supported() {
+        // test kitty protocol support
+        let mut stdout = Vec::new();
+
+        // data returned by the terminal from the query
+        // Captured from kitty 0.42.2
+        let test_stdin_data = [
+            // the following response indicated a successful graphical request
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('3'),
+            Key::Char('1'),
+            Key::Char(';'),
+            Key::Char('O'),
+            Key::Char('K'),
+            Key::UnknownEscSeq(['\\'].into()),
+        ];
+        let test_stdin = TestKeys::new(&test_stdin_data);
+
+        has_local_support(&mut stdout, &test_stdin).unwrap();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        // assert_eq!(result, "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c");
+        assert!(result.starts_with("\x1b_Gi=31,s=1,v=1,a=q,t=t;"));
+        assert!(result.ends_with("\x1b\\"));
+        assert!(test_stdin.reached_end());
+    }
 }
