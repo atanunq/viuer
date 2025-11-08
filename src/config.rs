@@ -1,6 +1,7 @@
 use crate::utils;
 
 /// Configuration struct to customize printing behaviour.
+#[derive(Debug)]
 pub struct Config {
     /// Enable true transparency instead of checkerboard background.
     /// Available only for the block printer. Defaults to false.
