@@ -2,6 +2,7 @@ use super::{adjust_offset, find_best_fit, Printer};
 use icy_sixel::sixel_string;
 use image::{imageops::FilterType, GenericImageView};
 
+#[derive(Debug)]
 pub struct IcySixelPrinter;
 
 impl Printer for IcySixelPrinter {

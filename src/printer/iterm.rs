@@ -13,6 +13,7 @@ use std::{
 };
 
 #[allow(non_camel_case_types)]
+#[derive(Debug)]
 pub struct iTermPrinter;
 
 static ITERM_SUPPORT: LazyLock<bool> = LazyLock::new(check_iterm_support);

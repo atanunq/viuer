@@ -8,6 +8,7 @@ use std::io::Write;
 use std::sync::LazyLock;
 use tempfile::NamedTempFile;
 
+#[derive(Debug)]
 pub struct KittyPrinter;
 
 const TEMP_FILE_PREFIX: &str = ".tty-graphics-protocol.viuer.";
