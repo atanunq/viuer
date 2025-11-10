@@ -55,7 +55,7 @@ pub enum KittySupport {
     Remote,
 }
 
-// Check if Kitty protocol can be used
+/// Check if Kitty protocol can be used
 fn check_kitty_support() -> KittySupport {
     if let Ok(term) = std::env::var("TERM") {
         if term.contains("kitty") || term.contains("ghostty") {
@@ -71,7 +71,7 @@ fn check_kitty_support() -> KittySupport {
     KittySupport::None
 }
 
-// Query the terminal whether it can display an image from a file
+/// Query the terminal whether it can display an image from a file
 fn has_local_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
     // create a temp file that will hold a 1x1 image
     let x = image::RgbaImage::new(1, 1);
@@ -122,7 +122,7 @@ fn has_local_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult
     Err(ViuError::KittyResponse(response))
 }
 
-// Print with kitty graphics protocol through a temp file
+/// Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
 fn print_local(
     stdout: &mut impl Write,
@@ -162,7 +162,7 @@ fn print_local(
     Ok((w, h))
 }
 
-// Print with escape codes
+/// Print with escape codes
 // TODO: try compression
 fn print_remote(
     stdout: &mut impl Write,
@@ -203,8 +203,8 @@ fn print_remote(
     Ok((w, h))
 }
 
-// Create a file in temporary dir and write the byte slice to it.
-// The NamedTempFile will be deleted once it goes out of scope.
+/// Create a file in temporary dir and write the byte slice to it.
+/// The NamedTempFile will be deleted once it goes out of scope.
 fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<NamedTempFile, ViuError> {
     let mut tmpfile = tempfile::Builder::new()
         .prefix(TEMP_FILE_PREFIX)

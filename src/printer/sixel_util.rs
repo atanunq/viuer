@@ -11,9 +11,10 @@ pub fn is_sixel_supported() -> bool {
     *SIXEL_SUPPORT
 }
 
-// Check if Sixel is within the terminal's attributes
-// see https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Sixel-Graphics
-// and https://vt100.net/docs/vt510-rm/DA1.html
+/// Check if Sixel is within the terminal's attributes.
+///
+/// see https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Sixel-Graphics
+/// and https://vt100.net/docs/vt510-rm/DA1.html
 fn check_device_attrs(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult<bool> {
     write!(stdout, "\x1b[c")?;
     stdout.flush()?;
@@ -37,7 +38,7 @@ fn check_device_attrs(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResul
     Ok(response.contains(";4;") || response.contains(";4c"))
 }
 
-// Check if Sixel protocol can be used
+/// Check if Sixel protocol can be used
 fn check_sixel_support() -> bool {
     let mut stdout = std::io::stdout();
     let stdin = Term::stdout();
