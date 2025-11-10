@@ -65,8 +65,8 @@ impl Printer for iTermPrinter {
     }
 }
 
-// This function requires both a DynamicImage, which is used to calculate dimensions,
-// and it's raw representation as a file, because that's the data iTerm needs to display it.
+/// This function requires both a DynamicImage, which is used to calculate dimensions,
+/// and it's raw representation as a file, because that's the data iTerm needs to display it.
 fn print_buffer(
     stdout: &mut impl Write,
     img: &DynamicImage,
@@ -90,7 +90,7 @@ fn print_buffer(
     Ok((w, h))
 }
 
-// Check if the iTerm protocol can be used
+/// Check if the iTerm protocol can be used
 fn check_iterm_support() -> bool {
     if let Ok(term) = std::env::var("TERM_PROGRAM") {
         if term.contains("iTerm")
