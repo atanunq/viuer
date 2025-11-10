@@ -3,7 +3,7 @@ use console::{Key, Term};
 use std::io::Write;
 use std::sync::LazyLock;
 
-static SIXEL_SUPPORT: LazyLock<bool> = LazyLock::new(check_sixel_support);
+static SIXEL_SUPPORT: LazyLock<bool> = LazyLock::new(|| check_device_attrs().unwrap_or(false));
 
 /// Returns the terminal's support for Sixel.
 pub fn is_sixel_supported() -> bool {
@@ -36,23 +36,4 @@ fn check_device_attrs() -> ViuResult<bool> {
     }
 
     Ok(response.contains(";4;") || response.contains(";4c"))
-}
-
-// Check if Sixel protocol can be used
-fn check_sixel_support() -> bool {
-    if let Ok(term) = std::env::var("TERM") {
-        match term.as_str() {
-            "yaft-256color" | "eat-truecolor" => {
-                return true;
-            }
-            _ => {
-                if let Ok(term_program) = std::env::var("TERM_PROGRAM") {
-                    if term_program == "MacTerm" {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    check_device_attrs().unwrap_or(false)
 }
