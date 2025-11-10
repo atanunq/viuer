@@ -17,10 +17,10 @@ pub enum ViuError {
     /// Kitty protocol not supported
     KittyNotSupported,
     /// Error while printing with sixel
-    #[cfg(feature = "sixel")]
+    #[cfg(all(feature = "sixel", not(windows)))]
     SixelError(sixel_rs::status::Error),
     /// Boxed generic error.
-    #[cfg(feature = "icy_sixel")]
+    #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
     IcySixelError(String),
 }
 
@@ -43,7 +43,7 @@ impl From<tempfile::PersistError> for ViuError {
     }
 }
 
-#[cfg(feature = "sixel")]
+#[cfg(all(feature = "sixel", not(windows)))]
 impl From<sixel_rs::status::Error> for ViuError {
     fn from(e: sixel_rs::status::Error) -> Self {
         ViuError::SixelError(e)
@@ -59,9 +59,9 @@ impl std::fmt::Display for ViuError {
             ViuError::Tempfile(e) => write!(f, "Tempfile error: {}", e),
             ViuError::KittyResponse(keys) => write!(f, "Kitty response: {:?}", keys),
             ViuError::KittyNotSupported => write!(f, "Kitty graphics protocol not supported"),
-            #[cfg(feature = "sixel")]
+            #[cfg(all(feature = "sixel", not(windows)))]
             ViuError::SixelError(e) => write!(f, "Sixel error: {:?}", e),
-            #[cfg(feature = "icy_sixel")]
+            #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
             ViuError::IcySixelError(e) => write!(f, "Icy Sixel error: {:?}", e),
         }
     }

@@ -141,12 +141,12 @@ pub fn print_from_file<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResul
 
 // Choose the appropriate printer to use based on user config and availability
 fn choose_printer(config: &Config) -> PrinterType {
-    #[cfg(feature = "icy_sixel")]
+    #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
     if config.use_sixel && is_sixel_supported() {
         return PrinterType::IcySixel;
     }
 
-    #[cfg(feature = "sixel")]
+    #[cfg(all(feature = "sixel", not(windows)))]
     if config.use_sixel && is_sixel_supported() {
         return PrinterType::Sixel;
     }
