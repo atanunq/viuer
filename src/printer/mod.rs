@@ -15,14 +15,14 @@ pub use block::BlockPrinter;
 mod kitty;
 pub use kitty::{get_kitty_support, KittyPrinter, KittySupport};
 
-#[cfg(feature = "sixel")]
+#[cfg(all(feature = "sixel", not(windows)))]
 mod sixel;
-#[cfg(feature = "sixel")]
+#[cfg(all(feature = "sixel", not(windows)))]
 pub use self::sixel::SixelPrinter;
 
-#[cfg(feature = "icy_sixel")]
+#[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
 mod icy_sixel;
-#[cfg(feature = "icy_sixel")]
+#[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
 pub use self::icy_sixel::IcySixelPrinter;
 
 #[cfg(any(feature = "sixel", feature = "icy_sixel"))]
@@ -31,6 +31,9 @@ mod sixel_util;
 pub use self::sixel_util::is_sixel_supported;
 
 mod iterm;
+#[cfg(test)]
+pub(crate) use crate::read_key::test_utils::TestKeys;
+pub(crate) use crate::read_key::ReadKey;
 pub use iterm::iTermPrinter;
 pub use iterm::is_iterm_supported;
 
@@ -40,6 +43,7 @@ pub trait Printer {
     fn print(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)>;
@@ -48,13 +52,14 @@ pub trait Printer {
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         let img = image::ImageReader::open(filename)?
             .with_guessed_format()?
             .decode()?;
-        self.print(stdout, &img, config)
+        self.print(stdout, stdin, &img, config)
     }
 }
 
@@ -64,9 +69,9 @@ pub enum PrinterType {
     Block,
     Kitty,
     iTerm,
-    #[cfg(feature = "sixel")]
+    #[cfg(all(feature = "sixel", not(windows)))]
     Sixel,
-    #[cfg(feature = "icy_sixel")]
+    #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
     IcySixel,
 }
 
@@ -74,17 +79,18 @@ impl Printer for PrinterType {
     fn print(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         match self {
-            PrinterType::Block => BlockPrinter.print(stdout, img, config),
-            PrinterType::Kitty => KittyPrinter.print(stdout, img, config),
-            PrinterType::iTerm => iTermPrinter.print(stdout, img, config),
-            #[cfg(feature = "sixel")]
-            PrinterType::Sixel => SixelPrinter.print(stdout, img, config),
-            #[cfg(feature = "icy_sixel")]
-            PrinterType::IcySixel => IcySixelPrinter.print(stdout, img, config),
+            PrinterType::Block => BlockPrinter.print(stdout, stdin, img, config),
+            PrinterType::Kitty => KittyPrinter.print(stdout, stdin, img, config),
+            PrinterType::iTerm => iTermPrinter.print(stdout, stdin, img, config),
+            #[cfg(all(feature = "sixel", not(windows)))]
+            PrinterType::Sixel => SixelPrinter.print(stdout, stdin, img, config),
+            #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
+            PrinterType::IcySixel => IcySixelPrinter.print(stdout, stdin, img, config),
         }
     }
 
@@ -92,17 +98,20 @@ impl Printer for PrinterType {
     fn print_from_file<P: AsRef<Path>>(
         &self,
         stdout: &mut impl Write,
+        stdin: &impl ReadKey,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         match self {
-            PrinterType::Block => BlockPrinter.print_from_file(stdout, filename, config),
-            PrinterType::Kitty => KittyPrinter.print_from_file(stdout, filename, config),
-            PrinterType::iTerm => iTermPrinter.print_from_file(stdout, filename, config),
-            #[cfg(feature = "sixel")]
-            PrinterType::Sixel => SixelPrinter.print_from_file(stdout, filename, config),
-            #[cfg(feature = "icy_sixel")]
-            PrinterType::IcySixel => IcySixelPrinter.print_from_file(stdout, filename, config),
+            PrinterType::Block => BlockPrinter.print_from_file(stdout, stdin, filename, config),
+            PrinterType::Kitty => KittyPrinter.print_from_file(stdout, stdin, filename, config),
+            PrinterType::iTerm => iTermPrinter.print_from_file(stdout, stdin, filename, config),
+            #[cfg(all(feature = "sixel", not(windows)))]
+            PrinterType::Sixel => SixelPrinter.print_from_file(stdout, stdin, filename, config),
+            #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
+            PrinterType::IcySixel => {
+                IcySixelPrinter.print_from_file(stdout, stdin, filename, config)
+            }
         }
     }
 }

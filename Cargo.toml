@@ -13,6 +13,8 @@ keywords = ["terminal", "image"]
 exclude = [".github"]
 rust-version = "1.80"
 
+resolver = "2"
+
 [dependencies]
 ansi_colours = "1"
 base64 = "0.22"
@@ -22,14 +24,16 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 tempfile = "3"
 termcolor = "1"
 icy_sixel = { version = "0.1", optional = true }
-sixel-rs = { version = "0.5", optional = true}
 
 [target.'cfg(windows)'.dependencies]
 crossterm = { version = "0.29", default-features = false, features = ["windows"]}
 
+[target.'cfg(not(windows))'.dependencies]
+sixel-rs = { version = "0.5", optional = true}
+
 [features]
 default = []
-sixel = ["sixel-rs"]
+sixel = ["dep:icy_sixel", "dep:sixel-rs"]
 icy_sixel = ["dep:icy_sixel"]
 print-file = ["image/default-formats"] # Hide file printing behind a flag because it adds heavy dependencies.
 
