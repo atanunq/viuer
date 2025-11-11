@@ -1,7 +1,8 @@
 use crate::error::ViuResult;
 use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
-use crate::Config;
+use crate::{Config, ViuError};
 use base64::{engine::general_purpose, Engine};
+use console::{Key, Term};
 use image::{DynamicImage, GenericImageView, ImageEncoder};
 use std::io::Write;
 use std::sync::LazyLock;
@@ -90,6 +91,63 @@ fn print_buffer(
     Ok((w, h))
 }
 
+const ITERM_CAP_REPLY_SIZE: usize = "1337;Capabilities=".len();
+
+/// Check if the terminal supports "iterm2 inline image protocol" by querying capabilities.
+///
+/// This function is based on what is written in <https://gitlab.com/gnachman/iterm2/-/issues/10236>
+fn has_iterm_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
+    // send the query
+    write!(
+        stdout,
+        // Query iterm2 capabilities (which as of writing is undocumented)
+        "\x1b]1337;Capabilities\x07"
+    )?;
+    // send extra "Device Status Report (DSR)" which practically all terminals respond to, to avoid infinitely blocking if not replied to the query above
+    // see https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-CSI-_-ordered-by-the-final-character_s_
+    write!(stdout, "\x1b[5n")?;
+
+    stdout.flush()?;
+
+    let mut response = Vec::new();
+
+    let end_seq = Key::UnknownEscSeq(vec!['[', '0', 'n']);
+
+    while let Ok(key) = stdin.read_key() {
+        // The response will end with the reply to "\x1b[5n", which is "\x1b[0n"
+        // Also, break if the Unknown key is found, which is returned when we're not in a tty
+        let should_break = key == end_seq || key == Key::Unknown;
+        response.push(key);
+        if should_break {
+            break;
+        }
+    }
+
+    // DEBUG: REMOVE THIS BEFORE MERGE
+    eprintln!("Iterm2 Response: {:#?}", response);
+
+    // no response to the "Capabilities" query, or pre-maturely ended without the DSR
+    if response.last() != Some(&end_seq) || response.len() < ITERM_CAP_REPLY_SIZE + 1/* BEL */ + 1
+    /* END SEQ */
+    {
+        return Err(ViuError::ItermResponse(response));
+    }
+
+    // The response format *should* be "\x1b]1337;Capabilities=" followed by FEATURES and finally end with "\x07"(BEL).
+    // FEATURES have the format for Capital letter, followed by none or more lowercase letteres, followed by none or more digits
+    // repeated without any delimiter.
+    // We only care about the "FILE" feature, which has simply just "F"
+
+    // remove the "intro" and the ST(stop) and the DSR from the search
+    let trunc_response = &response[ITERM_CAP_REPLY_SIZE..=response.len() - 2];
+
+    if trunc_response.contains(&Key::Char('F')) {
+        return Ok(());
+    }
+
+    Err(ViuError::ItermResponse(response))
+}
+
 /// Check if the iTerm protocol can be used
 fn check_iterm_support() -> bool {
     if let Ok(term) = std::env::var("TERM_PROGRAM") {
@@ -120,7 +178,9 @@ fn check_iterm_support() -> bool {
         }
     }
 
-    false
+    let mut stdout = std::io::stdout();
+    let term = Term::stdout();
+    has_iterm_support(&mut stdout, &term).is_ok()
 }
 
 #[cfg(test)]
@@ -149,5 +209,69 @@ mod tests {
             (2, 2)
         );
         assert_eq!(std::str::from_utf8(&vec).unwrap(), "\x1b[4;5H\x1b]1337;File=inline=1;preserveAspectRatio=1;size=95;width=2;height=2:iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAAJklEQVR4AQEbAOT/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACBAYIAEMAFdTlTsEAAAAASUVORK5CYII=\x07\n");
+    }
+
+    #[test]
+    fn capabilities_iterm2_should_reply() {
+        let mut vec = Vec::new();
+
+        let test_data = [
+            // intro
+            Key::UnknownEscSeq(['1'].into()),
+            Key::Char('3'),
+            Key::Char('3'),
+            Key::Char('7'),
+            Key::Char(';'), //Capabilities
+            Key::Char('C'),
+            Key::Char('a'),
+            Key::Char('p'),
+            Key::Char('a'),
+            Key::Char('b'),
+            Key::Char('i'),
+            Key::Char('l'),
+            Key::Char('i'),
+            Key::Char('t'),
+            Key::Char('i'),
+            Key::Char('e'),
+            Key::Char('s'),
+            Key::Char('='),
+            // actual features
+            Key::Char('T'),
+            Key::Char('3'),
+            Key::Char('L'),
+            Key::Char('r'),
+            // maybe more
+            Key::Char('F'),
+            Key::Char('S'),
+            Key::Char('x'),
+            // BEL / Bell
+            Key::Char('\x07'),
+            // DSR
+            Key::UnknownEscSeq(['[', '0', 'n'].into()),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        assert_eq!(has_iterm_support(&mut vec, &test_response).unwrap(), ());
+        let stdout = std::str::from_utf8(&vec).unwrap();
+
+        assert_eq!(stdout, "\x1b]1337;Capabilities\x07\x1b[5n");
+        assert!(test_response.reached_end());
+    }
+
+    #[test]
+    fn capabilites_should_handle_no_reply() {
+        let mut vec = Vec::new();
+
+        let test_data = [
+            // DSR
+            Key::UnknownEscSeq(['[', '0', 'n'].into()),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        assert!(has_iterm_support(&mut vec, &test_response).is_err());
+        let stdout = std::str::from_utf8(&vec).unwrap();
+
+        assert_eq!(stdout, "\x1b]1337;Capabilities\x07\x1b[5n");
+        assert!(test_response.reached_end());
     }
 }

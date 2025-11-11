@@ -16,6 +16,8 @@ pub enum ViuError {
     KittyResponse(Vec<console::Key>),
     /// Kitty protocol not supported
     KittyNotSupported,
+    /// Errenous response received from Iterm2
+    ItermResponse(Vec<console::Key>),
     /// Error while printing with sixel
     #[cfg(all(feature = "sixel", not(windows)))]
     SixelError(sixel_rs::status::Error),
@@ -59,6 +61,7 @@ impl std::fmt::Display for ViuError {
             ViuError::Tempfile(e) => write!(f, "Tempfile error: {}", e),
             ViuError::KittyResponse(keys) => write!(f, "Kitty response: {:?}", keys),
             ViuError::KittyNotSupported => write!(f, "Kitty graphics protocol not supported"),
+            ViuError::ItermResponse(keys) => write!(f, "Iterm response: {:?}", keys),
             #[cfg(all(feature = "sixel", not(windows)))]
             ViuError::SixelError(e) => write!(f, "Sixel error: {:?}", e),
             #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
