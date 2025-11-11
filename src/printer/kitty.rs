@@ -133,7 +133,12 @@ fn print_local(
     adjust_offset(stdout, config)?;
 
     // get the desired width and height
-    let (w, h) = find_best_fit(img, config.width, config.height);
+    let (w, h) = find_best_fit(
+        img,
+        config.width,
+        config.height,
+        config.preserve_aspect_ratio,
+    );
 
     write!(
         stdout,
@@ -172,7 +177,12 @@ fn print_remote(
 
     adjust_offset(stdout, config)?;
 
-    let (w, h) = find_best_fit(img, config.width, config.height);
+    let (w, h) = find_best_fit(
+        img,
+        config.width,
+        config.height,
+        config.preserve_aspect_ratio,
+    );
 
     let first_chunk: String = iter.by_ref().take(4096).collect();
 

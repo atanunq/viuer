@@ -18,6 +18,8 @@ pub struct Config {
     /// Y offset. Can be negative only when `absolute_offset` is `false`.
     /// Defaults to 0.
     pub y: i16,
+    /// Preserve the aspect ratio of the picture if it gets resized.
+    pub preserve_aspect_ratio: bool,
     /// Take a note of cursor position before printing and restore it when finished.
     /// Defaults to false.
     pub restore_cursor: bool,
@@ -44,6 +46,7 @@ impl std::default::Default for Config {
             absolute_offset: true,
             x: 0,
             y: 0,
+            preserve_aspect_ratio: false,
             restore_cursor: false,
             width: None,
             height: None,
