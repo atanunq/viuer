@@ -150,6 +150,12 @@ fn has_iterm_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult
 
 /// Check if the iTerm protocol can be used
 fn check_iterm_support() -> bool {
+    let mut stdout = std::io::stdout();
+    let term = Term::stdout();
+    if has_iterm_support(&mut stdout, &term).is_ok() {
+        return true;
+    }
+
     if let Ok(term) = std::env::var("TERM_PROGRAM") {
         if term.contains("iTerm")
             || term.contains("WezTerm")
@@ -169,7 +175,6 @@ fn check_iterm_support() -> bool {
             return true;
         }
     }
-
     // Konsole does not have "TERM_PROGRAM" and only has "TERM=xterm-256color", which is too generic
     // but in exchange, there is the following Konsole-only environment variable with which we can detect it
     if let Ok(version) = std::env::var("KONSOLE_VERSION") {
@@ -178,9 +183,7 @@ fn check_iterm_support() -> bool {
         }
     }
 
-    let mut stdout = std::io::stdout();
-    let term = Term::stdout();
-    has_iterm_support(&mut stdout, &term).is_ok()
+    false
 }
 
 #[cfg(test)]
