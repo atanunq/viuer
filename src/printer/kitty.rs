@@ -88,6 +88,34 @@ fn close_tmp_file(temp_file: NamedTempFile) -> ViuResult {
     Ok(())
 }
 
+/// Send & Wait for the DSR(Device Status Report) query.
+fn wait_for_dsr(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
+    write!(stdout, "\x1b[5n")?;
+    stdout.flush()?;
+
+    let mut response = Vec::new();
+
+    // assign it once instead of having to allocate a vector with static content in each loop
+    let end_seq = Key::UnknownEscSeq(vec!['[', '0', 'n']);
+
+    while let Ok(key) = stdin.read_key() {
+        // The response will end with Esc('x1b'), followed by Backslash('\').
+        // Also, break if the Unknown key is found, which is returned when we're not in a tty
+        // https://sw.kovidgoyal.net/kitty/graphics-protocol/#display-images-on-screen
+        let should_break = key == end_seq || key == Key::Unknown;
+        response.push(key);
+        if should_break {
+            break;
+        }
+    }
+
+    if response.len() == 1 && response.last().unwrap() == &end_seq {
+        return Ok(());
+    }
+
+    Err(ViuError::KittyResponse(response))
+}
+
 /// Query the terminal whether it can display inline images (the kitty image protocol base-line)
 fn has_remote_support(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResult {
     // send the query
@@ -203,7 +231,7 @@ fn has_local_support(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResult
 /// Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
 fn print_local(
-    _stdin: &impl ReadKey,
+    stdin: &impl ReadKey,
     stdout: &mut impl Write,
     img: &image::DynamicImage,
     config: &Config,
@@ -232,6 +260,9 @@ fn print_local(
         )
     )?;
     stdout.flush()?;
+
+    // prevent race condition of removing the file before the terminal is finished reading it.
+    wait_for_dsr(stdout, stdin)?;
 
     close_tmp_file(temp_file)?;
 
@@ -310,7 +341,7 @@ mod tests {
 
         let mut vec = Vec::new();
 
-        let test_data = [];
+        let test_data = [Key::UnknownEscSeq(vec!['[', '0', 'n'])];
         let test_response = TestKeys::new(&test_data);
 
         assert_eq!(
@@ -320,7 +351,7 @@ mod tests {
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,t=t;"));
-        assert!(result.ends_with("\x1b\\"));
+        assert!(result.ends_with("\x1b\\\x1b[5n"));
         assert!(test_response.reached_end());
     }
 
