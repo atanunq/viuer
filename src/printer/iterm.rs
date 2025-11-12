@@ -95,13 +95,13 @@ const ITERM_CAP_REPLY_SIZE: usize = "1337;Capabilities=".len();
 
 /// Check if the terminal supports "iterm2 inline image protocol" by querying capabilities.
 ///
-/// This function is based on what is written in <https://gitlab.com/gnachman/iterm2/-/issues/10236>
+/// This function is based on what is written in <https://iterm2.com/feature-reporting/> and <https://gitlab.com/gnachman/iterm2/-/issues/10236>.
 fn has_iterm_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
     // send the query
     write!(
         stdout,
-        // Query iterm2 capabilities (which as of writing is undocumented)
-        "\x1b]1337;Capabilities\x07"
+        // Query iterm2 capabilities https://iterm2.com/feature-reporting/
+        "\x1b]1337;Capabilities\x1b\\"
     )?;
     // send extra "Device Status Report (DSR)" which practically all terminals respond to, to avoid infinitely blocking if not replied to the query above
     // see https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h3-Functions-using-CSI-_-ordered-by-the-final-character_s_
@@ -133,7 +133,7 @@ fn has_iterm_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult
         return Err(ViuError::ItermResponse(response));
     }
 
-    // The response format *should* be "\x1b]1337;Capabilities=" followed by FEATURES and finally end with "\x07"(BEL).
+    // The response format *should* be "\x1b]1337;Capabilities=" followed by FEATURES and finally end with "\x1b\\"(ESC \).
     // FEATURES have the format for Capital letter, followed by none or more lowercase letteres, followed by none or more digits
     // repeated without any delimiter.
     // We only care about the "FILE" feature, which has simply just "F"
@@ -217,11 +217,11 @@ mod tests {
 
         let test_data = [
             // intro
-            Key::UnknownEscSeq(['1'].into()),
+            Key::UnknownEscSeq([']', '1'].into()), // TODO: is this actually returning that, or differently? i dont know how "console" handles OSC
             Key::Char('3'),
             Key::Char('3'),
             Key::Char('7'),
-            Key::Char(';'), //Capabilities
+            Key::Char(';'),
             Key::Char('C'),
             Key::Char('a'),
             Key::Char('p'),
@@ -235,7 +235,7 @@ mod tests {
             Key::Char('e'),
             Key::Char('s'),
             Key::Char('='),
-            // actual features
+            // actual features (not actual features except "F")
             Key::Char('T'),
             Key::Char('3'),
             Key::Char('L'),
@@ -245,16 +245,16 @@ mod tests {
             Key::Char('S'),
             Key::Char('x'),
             // BEL / Bell
-            Key::Char('\x07'),
+            Key::UnknownEscSeq(vec!['\\']),
             // DSR
-            Key::UnknownEscSeq(['[', '0', 'n'].into()),
+            Key::UnknownEscSeq(vec!['[', '0', 'n']),
         ];
         let test_response = TestKeys::new(&test_data);
 
         assert_eq!(has_iterm_support(&mut vec, &test_response).unwrap(), ());
         let stdout = std::str::from_utf8(&vec).unwrap();
 
-        assert_eq!(stdout, "\x1b]1337;Capabilities\x07\x1b[5n");
+        assert_eq!(stdout, "\x1b]1337;Capabilities\x1b\\\x1b[5n");
         assert!(test_response.reached_end());
     }
 
@@ -271,7 +271,7 @@ mod tests {
         assert!(has_iterm_support(&mut vec, &test_response).is_err());
         let stdout = std::str::from_utf8(&vec).unwrap();
 
-        assert_eq!(stdout, "\x1b]1337;Capabilities\x07\x1b[5n");
+        assert_eq!(stdout, "\x1b]1337;Capabilities\x1b\\\x1b[5n");
         assert!(test_response.reached_end());
     }
 }
