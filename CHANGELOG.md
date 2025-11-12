@@ -3,6 +3,7 @@
 - Remove `lazy_static` dependency in favor of `std::sync::LazyLock`
 - MSRV is now 1.80
 - Use sixel if found in device attributes instead of static TERM list
+- Add `Konsole` as a available terminal for iterm2 images
 
 ## 0.9.2
 - Use iterm and sixel in more terminals
