@@ -108,6 +108,15 @@ fn check_iterm_support() -> bool {
             return true;
         }
     }
+
+    // Konsole does not have "TERM_PROGRAM" and only has "TERM=xterm-256color", which is too generic
+    // but in exchange, there is the following Konsole-only environment variable with which we can detect it
+    if let Ok(version) = std::env::var("KONSOLE_VERSION") {
+        if !version.is_empty() {
+            return true;
+        }
+    }
+
     false
 }
 
