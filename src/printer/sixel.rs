@@ -1,17 +1,19 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
 use crate::Config;
 use image::{imageops::FilterType, DynamicImage, GenericImageView};
 use sixel_rs::encoder::{Encoder, QuickFrameBuilder};
 use sixel_rs::optflags::EncodePolicy;
 use std::io::Write;
 
+#[derive(Debug)]
 pub struct SixelPrinter;
 
 impl Printer for SixelPrinter {
     fn print(
         &self,
         stdout: &mut impl Write,
+        _stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {

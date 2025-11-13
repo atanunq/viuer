@@ -50,6 +50,7 @@
 #[cfg(feature = "print-file")]
 use std::path::Path;
 
+use console::Term;
 use crossterm::{
     cursor::{RestorePosition, SavePosition},
     execute,
@@ -60,6 +61,7 @@ use printer::{Printer, PrinterType};
 mod config;
 mod error;
 mod printer;
+mod read_key;
 mod utils;
 
 pub use config::Config;
@@ -99,7 +101,10 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
         execute!(&mut stdout, SavePosition)?;
     }
 
-    let (w, h) = choose_printer(config).print(&mut stdout, img, config)?;
+    // This is required to get a "Term" instance for "::read_key"
+    let term = Term::stdout();
+
+    let (w, h) = choose_printer(config).print(&mut stdout, &term, img, config)?;
 
     if config.restore_cursor {
         execute!(&mut stdout, RestorePosition)?;
@@ -130,7 +135,10 @@ pub fn print_from_file<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResul
         execute!(&mut stdout, SavePosition)?;
     }
 
-    let (w, h) = choose_printer(config).print_from_file(&mut stdout, filename, config)?;
+    // This is required to get a "Term" instance for "::read_key"
+    let term = Term::stdout();
+
+    let (w, h) = choose_printer(config).print_from_file(&mut stdout, &term, filename, config)?;
 
     if config.restore_cursor {
         execute!(&mut stdout, RestorePosition)?;
