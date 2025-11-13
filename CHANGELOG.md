@@ -9,7 +9,7 @@
 - Remove `lazy_static` dependency in favor of `std::sync::LazyLock`
 - MSRV is now 1.80
 - Use sixel if found in device attributes instead of static TERM list
-- Detect iterm2 protocol support by querying capabilities
+- Detect iterm2 protocol support by querying `1337;Capabilities` or `1337;ReportCellSize`
 
 ## 0.9.2
 - Use iterm and sixel in more terminals
