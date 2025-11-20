@@ -1,3 +1,6 @@
+## next
+- Add `Konsole` as a available terminal for iterm2 images
+
 ## 0.10.0
 - Add `icy_sixel` feature that uses a Rust implementation of Sixel
 - Remove `lazy_static` dependency in favor of `std::sync::LazyLock`
