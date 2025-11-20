@@ -6,6 +6,7 @@ use sixel_rs::encoder::{Encoder, QuickFrameBuilder};
 use sixel_rs::optflags::EncodePolicy;
 use std::io::Write;
 
+#[derive(Debug)]
 pub struct SixelPrinter;
 
 impl Printer for SixelPrinter {
