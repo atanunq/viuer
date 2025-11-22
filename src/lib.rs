@@ -137,7 +137,7 @@ pub fn print_from_file<P: AsRef<Path>>(filename: P, config: &Config) -> ViuResul
     // This is required to get a "Term" instance for "::read_key"
     let term = Term::stdout();
 
-    let (w, h) = choose_printer(config).print_from_file(&mut stdout, &term, filename, config)?;
+    let (w, h) = choose_printer(config).print_from_file(&term, &mut stdout, filename, config)?;
 
     if config.restore_cursor {
         execute!(&mut stdout, RestorePosition)?;

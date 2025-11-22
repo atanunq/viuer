@@ -48,8 +48,8 @@ impl Printer for iTermPrinter {
     #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
-        stdout: &mut impl Write,
         _stdin: &impl ReadKey,
+        stdout: &mut impl Write,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {

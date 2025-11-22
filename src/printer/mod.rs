@@ -56,8 +56,8 @@ pub trait Printer {
     #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
-        stdout: &mut impl Write,
         stdin: &impl ReadKey,
+        stdout: &mut impl Write,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
@@ -102,20 +102,20 @@ impl Printer for PrinterType {
     #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
-        stdout: &mut impl Write,
         stdin: &impl ReadKey,
+        stdout: &mut impl Write,
         filename: P,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
         match self {
-            PrinterType::Block => BlockPrinter.print_from_file(stdout, stdin, filename, config),
-            PrinterType::Kitty => KittyPrinter.print_from_file(stdout, stdin, filename, config),
-            PrinterType::iTerm => iTermPrinter.print_from_file(stdout, stdin, filename, config),
+            PrinterType::Block => BlockPrinter.print_from_file(stdin, stdout, filename, config),
+            PrinterType::Kitty => KittyPrinter.print_from_file(stdin, stdout, filename, config),
+            PrinterType::iTerm => iTermPrinter.print_from_file(stdin, stdout, filename, config),
             #[cfg(all(feature = "sixel", not(windows)))]
-            PrinterType::Sixel => SixelPrinter.print_from_file(stdout, stdin, filename, config),
+            PrinterType::Sixel => SixelPrinter.print_from_file(stdin, stdout, filename, config),
             #[cfg(any(feature = "icy_sixel", all(feature = "sixel", windows)))]
             PrinterType::IcySixel => {
-                IcySixelPrinter.print_from_file(stdout, stdin, filename, config)
+                IcySixelPrinter.print_from_file(stdin, stdout, filename, config)
             }
         }
     }
