@@ -61,7 +61,6 @@ use printer::{Printer, PrinterType};
 mod config;
 mod error;
 mod printer;
-mod read_key;
 mod utils;
 
 pub use config::Config;

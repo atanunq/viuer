@@ -31,11 +31,14 @@ mod sixel_util;
 pub use self::sixel_util::is_sixel_supported;
 
 mod iterm;
-#[cfg(test)]
-pub(crate) use crate::read_key::test_utils::TestKeys;
-pub(crate) use crate::read_key::ReadKey;
+
+pub(crate) mod read_key;
+
 pub use iterm::iTermPrinter;
 pub use iterm::is_iterm_supported;
+#[cfg(test)]
+use read_key::test_utils::TestKeys;
+use read_key::ReadKey;
 
 pub trait Printer {
     // Print the given image in the terminal while respecting the options in the config struct.
