@@ -1,5 +1,6 @@
 ## next
 - Add `Konsole` as a available terminal for iterm2 images
+- Add `stdin` internal argument to make printer utils testable
 
 ## 0.10.0
 - Add `icy_sixel` feature that uses a Rust implementation of Sixel

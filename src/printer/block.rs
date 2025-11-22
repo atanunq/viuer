@@ -1,5 +1,5 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, Printer};
+use crate::printer::{adjust_offset, Printer, ReadKey};
 use crate::Config;
 
 use ansi_colours::ansi256_from_rgb;
@@ -22,6 +22,7 @@ pub struct BlockPrinter;
 impl Printer for BlockPrinter {
     fn print(
         &self,
+        _stdin: &impl ReadKey,
         // TODO: The provided object is not used because termcolor needs an implementation of the WriteColor trait
         _stdout: &mut impl Write,
         img: &DynamicImage,

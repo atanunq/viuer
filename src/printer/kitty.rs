@@ -1,5 +1,5 @@
 use crate::error::{ViuError, ViuResult};
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
@@ -22,6 +22,7 @@ pub fn get_kitty_support() -> KittySupport {
 impl Printer for KittyPrinter {
     fn print(
         &self,
+        stdin: &impl ReadKey,
         stdout: &mut impl Write,
         img: &image::DynamicImage,
         config: &Config,
@@ -30,11 +31,11 @@ impl Printer for KittyPrinter {
             KittySupport::None => Err(ViuError::KittyNotSupported),
             KittySupport::Local => {
                 // print from file
-                print_local(stdout, img, config)
+                print_local(stdin, stdout, img, config)
             }
             KittySupport::Remote => {
                 // print through escape codes
-                print_remote(stdout, img, config)
+                print_remote(stdin, stdout, img, config)
             }
         }
     }
@@ -55,11 +56,13 @@ pub enum KittySupport {
     Remote,
 }
 
-// Check if Kitty protocol can be used
+/// Check if Kitty protocol can be used
 fn check_kitty_support() -> KittySupport {
     if let Ok(term) = std::env::var("TERM") {
         if term.contains("kitty") || term.contains("ghostty") {
-            if has_local_support().is_ok() {
+            let mut stdout = std::io::stdout();
+            let stdin = Term::stdout();
+            if has_local_support(&stdin, &mut stdout).is_ok() {
                 return KittySupport::Local;
             }
 
@@ -69,15 +72,16 @@ fn check_kitty_support() -> KittySupport {
     KittySupport::None
 }
 
-// Query the terminal whether it can display an image from a file
-fn has_local_support() -> ViuResult {
+/// Query the terminal whether it can display an image from a file
+fn has_local_support(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResult {
     // create a temp file that will hold a 1x1 image
     let x = image::RgbaImage::new(1, 1);
     let raw_img = x.as_raw();
     let temp_file = store_in_tmp_file(raw_img)?;
 
     // send the query
-    print!(
+    write!(
+        stdout,
         // t=t tells Kitty it's reading from a temp file and will attempt to delete if afterwards
         "\x1b_Gi=31,s=1,v=1,a=q,t=t;{}\x1b\\",
         general_purpose::STANDARD.encode(
@@ -86,14 +90,13 @@ fn has_local_support() -> ViuResult {
                 .to_str()
                 .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
         )
-    );
-    std::io::stdout().flush()?;
+    )?;
+    stdout.flush()?;
 
     // collect Kitty's response after the query
-    let term = Term::stdout();
     let mut response = Vec::new();
 
-    while let Ok(key) = term.read_key() {
+    while let Ok(key) = stdin.read_key() {
         // The response will end with Esc('x1b'), followed by Backslash('\').
         // Also, break if the Unknown key is found, which is returned when we're not in a tty
         let should_break = key == Key::UnknownEscSeq(vec!['\\']) || key == Key::Unknown;
@@ -120,9 +123,10 @@ fn has_local_support() -> ViuResult {
     Err(ViuError::KittyResponse(response))
 }
 
-// Print with kitty graphics protocol through a temp file
+/// Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
 fn print_local(
+    _stdin: &impl ReadKey,
     stdout: &mut impl Write,
     img: &image::DynamicImage,
     config: &Config,
@@ -159,9 +163,10 @@ fn print_local(
     Ok((w, h))
 }
 
-// Print with escape codes
+/// Print with escape codes
 // TODO: try compression
 fn print_remote(
+    _stdin: &impl ReadKey,
     stdout: &mut impl Write,
     img: &image::DynamicImage,
     config: &Config,
@@ -199,8 +204,8 @@ fn print_remote(
     Ok((w, h))
 }
 
-// Create a file in temporary dir and write the byte slice to it.
-// The NamedTempFile will be deleted once it goes out of scope.
+/// Create a file in temporary dir and write the byte slice to it.
+/// The NamedTempFile will be deleted once it goes out of scope.
 fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<NamedTempFile, ViuError> {
     let mut tmpfile = tempfile::Builder::new()
         .prefix(TEMP_FILE_PREFIX)
@@ -214,6 +219,8 @@ fn store_in_tmp_file(buf: &[u8]) -> std::result::Result<NamedTempFile, ViuError>
 
 #[cfg(test)]
 mod tests {
+    use crate::printer::TestKeys;
+
     use super::*;
     use image::{DynamicImage, GenericImage};
 
@@ -227,11 +234,19 @@ mod tests {
         };
 
         let mut vec = Vec::new();
-        assert_eq!(print_local(&mut vec, &img, &config).unwrap(), (40, 13));
+
+        let test_data = [];
+        let test_response = TestKeys::new(&test_data);
+
+        assert_eq!(
+            print_local(&test_response, &mut vec, &img, &config).unwrap(),
+            (40, 13)
+        );
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,t=t;"));
         assert!(result.ends_with("\x1b\\\n"));
+        assert!(test_response.reached_end());
     }
 
     #[test]
@@ -246,12 +261,51 @@ mod tests {
         };
 
         let mut vec = Vec::new();
-        assert_eq!(print_remote(&mut vec, &img, &config).unwrap(), (1, 1));
+
+        let test_data = [];
+        let test_response = TestKeys::new(&test_data);
+
+        assert_eq!(
+            print_remote(&test_response, &mut vec, &img, &config).unwrap(),
+            (1, 1)
+        );
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert_eq!(
             result,
             "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,m=1;AAAAAAIEBgg=\x1b\\\n"
         );
+        assert!(test_response.reached_end());
+    }
+
+    #[test]
+    fn test_kitty_protocol_supported() {
+        // test kitty protocol support
+        let mut stdout = Vec::new();
+
+        // data returned by the terminal from the query
+        // Captured from kitty 0.42.2
+        let test_stdin_data = [
+            // the following response indicated a successful graphical request
+            Key::UnknownEscSeq(['_'].into()),
+            Key::Char('G'),
+            Key::Char('i'),
+            Key::Char('='),
+            Key::Char('3'),
+            Key::Char('1'),
+            Key::Char(';'),
+            Key::Char('O'),
+            Key::Char('K'),
+            Key::UnknownEscSeq(['\\'].into()),
+        ];
+        let test_stdin = TestKeys::new(&test_stdin_data);
+
+        has_local_support(&test_stdin, &mut stdout).unwrap();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        // assert_eq!(result, "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c");
+        assert!(result.starts_with("\x1b_Gi=31,s=1,v=1,a=q,t=t;"));
+        assert!(result.ends_with("\x1b\\"));
+        assert!(test_stdin.reached_end());
     }
 }

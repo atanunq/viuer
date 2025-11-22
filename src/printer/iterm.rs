@@ -1,5 +1,5 @@
 use crate::error::ViuResult;
-use crate::printer::{adjust_offset, find_best_fit, Printer};
+use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use image::{DynamicImage, GenericImageView, ImageEncoder};
@@ -26,6 +26,7 @@ pub fn is_iterm_supported() -> bool {
 impl Printer for iTermPrinter {
     fn print(
         &self,
+        _stdin: &impl ReadKey,
         stdout: &mut impl Write,
         img: &DynamicImage,
         config: &Config,
@@ -47,6 +48,7 @@ impl Printer for iTermPrinter {
     #[cfg(feature = "print-file")]
     fn print_from_file<P: AsRef<Path>>(
         &self,
+        _stdin: &impl ReadKey,
         stdout: &mut impl Write,
         filename: P,
         config: &Config,
@@ -63,8 +65,8 @@ impl Printer for iTermPrinter {
     }
 }
 
-// This function requires both a DynamicImage, which is used to calculate dimensions,
-// and it's raw representation as a file, because that's the data iTerm needs to display it.
+/// This function requires both a DynamicImage, which is used to calculate dimensions,
+/// and it's raw representation as a file, because that's the data iTerm needs to display it.
 fn print_buffer(
     stdout: &mut impl Write,
     img: &DynamicImage,
@@ -88,7 +90,7 @@ fn print_buffer(
     Ok((w, h))
 }
 
-// Check if the iTerm protocol can be used
+/// Check if the iTerm protocol can be used
 fn check_iterm_support() -> bool {
     if let Ok(term) = std::env::var("TERM_PROGRAM") {
         if term.contains("iTerm")
@@ -123,6 +125,8 @@ fn check_iterm_support() -> bool {
 
 #[cfg(test)]
 mod tests {
+    use crate::printer::TestKeys;
+
     use super::*;
     use image::GenericImage;
 
@@ -138,7 +142,12 @@ mod tests {
         };
         let mut vec = Vec::new();
 
-        assert_eq!(iTermPrinter.print(&mut vec, &img, &config).unwrap(), (2, 2));
+        let stdin = TestKeys::new(&[]);
+
+        assert_eq!(
+            iTermPrinter.print(&stdin, &mut vec, &img, &config).unwrap(),
+            (2, 2)
+        );
         assert_eq!(std::str::from_utf8(&vec).unwrap(), "\x1b[4;5H\x1b]1337;File=inline=1;preserveAspectRatio=1;size=95;width=2;height=2:iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAAJklEQVR4AQEbAOT/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACBAYIAEMAFdTlTsEAAAAASUVORK5CYII=\x07\n");
     }
 }

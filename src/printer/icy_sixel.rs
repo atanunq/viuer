@@ -1,4 +1,4 @@
-use super::{adjust_offset, find_best_fit, Printer};
+use super::{adjust_offset, find_best_fit, Printer, ReadKey};
 use icy_sixel::sixel_string;
 use image::{imageops::FilterType, GenericImageView};
 
@@ -8,6 +8,7 @@ pub struct IcySixelPrinter;
 impl Printer for IcySixelPrinter {
     fn print(
         &self,
+        _stdin: &impl ReadKey,
         stdout: &mut impl std::io::Write,
         img: &image::DynamicImage,
         config: &crate::Config,
