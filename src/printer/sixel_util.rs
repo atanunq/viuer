@@ -15,7 +15,7 @@ pub fn is_sixel_supported() -> bool {
 ///
 /// see https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Sixel-Graphics
 /// and https://vt100.net/docs/vt510-rm/DA1.html
-fn check_device_attrs(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult<bool> {
+fn check_device_attrs(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResult<bool> {
     write!(stdout, "\x1b[c")?;
     stdout.flush()?;
 
@@ -42,7 +42,7 @@ fn check_device_attrs(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResul
 fn check_sixel_support() -> bool {
     let mut stdout = std::io::stdout();
     let stdin = Term::stdout();
-    check_device_attrs(&mut stdout, &stdin).unwrap_or(false)
+    check_device_attrs(&stdin, &mut stdout).unwrap_or(false)
 }
 
 #[cfg(test)]
@@ -75,7 +75,7 @@ mod tests {
         ];
         let test_stdin = TestKeys::new(&test_stdin_data);
 
-        check_device_attrs(&mut stdout, &test_stdin).unwrap();
+        check_device_attrs(&test_stdin, &mut stdout).unwrap();
         let result = std::str::from_utf8(&stdout).unwrap();
 
         assert_eq!(result, "\x1b[c");

@@ -31,11 +31,11 @@ impl Printer for KittyPrinter {
             KittySupport::None => Err(ViuError::KittyNotSupported),
             KittySupport::Local => {
                 // print from file
-                print_local(stdout, stdin, img, config)
+                print_local(stdin, stdout, img, config)
             }
             KittySupport::Remote => {
                 // print through escape codes
-                print_remote(stdout, stdin, img, config)
+                print_remote(stdin, stdout, img, config)
             }
         }
     }
@@ -126,8 +126,8 @@ fn has_local_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult
 /// Print with kitty graphics protocol through a temp file
 // TODO: try with kitty's supported compression
 fn print_local(
-    stdout: &mut impl Write,
     _stdin: &impl ReadKey,
+    stdout: &mut impl Write,
     img: &image::DynamicImage,
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
@@ -166,8 +166,8 @@ fn print_local(
 /// Print with escape codes
 // TODO: try compression
 fn print_remote(
-    stdout: &mut impl Write,
     _stdin: &impl ReadKey,
+    stdout: &mut impl Write,
     img: &image::DynamicImage,
     config: &Config,
 ) -> ViuResult<(u32, u32)> {
@@ -239,7 +239,7 @@ mod tests {
         let test_response = TestKeys::new(&test_data);
 
         assert_eq!(
-            print_local(&mut vec, &test_response, &img, &config).unwrap(),
+            print_local(&test_response, &mut vec, &img, &config).unwrap(),
             (40, 13)
         );
         let result = std::str::from_utf8(&vec).unwrap();
@@ -266,7 +266,7 @@ mod tests {
         let test_response = TestKeys::new(&test_data);
 
         assert_eq!(
-            print_remote(&mut vec, &test_response, &img, &config).unwrap(),
+            print_remote(&test_response, &mut vec, &img, &config).unwrap(),
             (1, 1)
         );
         let result = std::str::from_utf8(&vec).unwrap();
