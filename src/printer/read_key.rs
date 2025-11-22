@@ -1,7 +1,7 @@
 use console::{Key, Term};
 
 /// Trait to allow reading keys from multiple inputs like [`Term`] (via [`Term::read_key`]) or a custom Testing utility.
-pub(crate) trait ReadKey {
+pub trait ReadKey {
     fn read_key(&self) -> std::io::Result<Key>;
 }
 
@@ -12,7 +12,7 @@ impl ReadKey for Term {
 }
 
 #[cfg(test)]
-pub(crate) mod test_utils {
+pub mod test_utils {
     use std::{cell::RefCell, io};
 
     use console::Key;
@@ -23,7 +23,7 @@ pub(crate) mod test_utils {
     ///
     /// Will returns a error if the sequence has reached the end, but a new one is requested.
     #[derive(Debug, Clone)]
-    pub(crate) struct TestKeys<'a> {
+    pub struct TestKeys<'a> {
         data: &'a [Key],
         next_idx: RefCell<usize>,
     }
