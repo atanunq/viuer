@@ -22,8 +22,8 @@ pub fn get_kitty_support() -> KittySupport {
 impl Printer for KittyPrinter {
     fn print(
         &self,
-        stdout: &mut impl Write,
         stdin: &impl ReadKey,
+        stdout: &mut impl Write,
         img: &image::DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {

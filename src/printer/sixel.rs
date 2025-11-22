@@ -12,8 +12,8 @@ pub struct SixelPrinter;
 impl Printer for SixelPrinter {
     fn print(
         &self,
-        stdout: &mut impl Write,
         _stdin: &impl ReadKey,
+        stdout: &mut impl Write,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {

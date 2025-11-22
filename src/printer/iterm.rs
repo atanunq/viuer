@@ -26,8 +26,8 @@ pub fn is_iterm_supported() -> bool {
 impl Printer for iTermPrinter {
     fn print(
         &self,
-        stdout: &mut impl Write,
         _stdin: &impl ReadKey,
+        stdout: &mut impl Write,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
@@ -145,7 +145,7 @@ mod tests {
         let stdin = TestKeys::new(&[]);
 
         assert_eq!(
-            iTermPrinter.print(&mut vec, &stdin, &img, &config).unwrap(),
+            iTermPrinter.print(&stdin, &mut vec, &img, &config).unwrap(),
             (2, 2)
         );
         assert_eq!(std::str::from_utf8(&vec).unwrap(), "\x1b[4;5H\x1b]1337;File=inline=1;preserveAspectRatio=1;size=95;width=2;height=2:iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAYAAAC56t6BAAAAJklEQVR4AQEbAOT/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACBAYIAEMAFdTlTsEAAAAASUVORK5CYII=\x07\n");

@@ -8,8 +8,8 @@ pub struct IcySixelPrinter;
 impl Printer for IcySixelPrinter {
     fn print(
         &self,
-        stdout: &mut impl std::io::Write,
         _stdin: &impl ReadKey,
+        stdout: &mut impl std::io::Write,
         img: &image::DynamicImage,
         config: &crate::Config,
     ) -> crate::ViuResult<(u32, u32)> {

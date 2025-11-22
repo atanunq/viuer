@@ -22,9 +22,9 @@ pub struct BlockPrinter;
 impl Printer for BlockPrinter {
     fn print(
         &self,
+        _stdin: &impl ReadKey,
         // TODO: The provided object is not used because termcolor needs an implementation of the WriteColor trait
         _stdout: &mut impl Write,
-        _stdin: &impl ReadKey,
         img: &DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {

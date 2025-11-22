@@ -25,6 +25,8 @@ pub mod test_utils {
     #[derive(Debug, Clone)]
     pub struct TestKeys<'a> {
         data: &'a [Key],
+        /// The trait is &self as it is build around current Term, which only has Term::ready_key(&self) signature.
+        /// Hence, cannot modify inner state unless we use inner mutability here, like RefCell.
         next_idx: RefCell<usize>,
     }
 

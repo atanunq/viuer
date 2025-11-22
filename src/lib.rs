@@ -103,7 +103,7 @@ pub fn print(img: &DynamicImage, config: &Config) -> ViuResult<(u32, u32)> {
     // This is required to get a "Term" instance for "::read_key"
     let term = Term::stdout();
 
-    let (w, h) = choose_printer(config).print(&mut stdout, &term, img, config)?;
+    let (w, h) = choose_printer(config).print(&term, &mut stdout, img, config)?;
 
     if config.restore_cursor {
         execute!(&mut stdout, RestorePosition)?;
