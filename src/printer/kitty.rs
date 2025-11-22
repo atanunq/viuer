@@ -163,6 +163,10 @@ fn has_remote_support(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResul
         Key::Char('='),
         Key::Char('3'),
         Key::Char('1'),
+        Key::Char(';'),
+        Key::Char('O'),
+        Key::Char('K'),
+        Key::UnknownEscSeq(vec!['\\']),
     ];
 
     // The Graphics query and the device attributes response could theoretically be in any order
@@ -214,14 +218,23 @@ fn has_local_support(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResult
 
     close_tmp_file(temp_file)?;
 
-    // Kitty response should end with these 3 Keys if it was successful
+    // The Graphics query response
     let expected = [
+        Key::UnknownEscSeq(['_'].into()),
+        Key::Char('G'),
+        Key::Char('i'),
+        Key::Char('='),
+        Key::Char('3'),
+        Key::Char('1'),
+        Key::Char(';'),
         Key::Char('O'),
         Key::Char('K'),
         Key::UnknownEscSeq(vec!['\\']),
     ];
 
-    if response.len() >= expected.len() && response[response.len() - 3..] == expected {
+    // The Graphics query and the device attributes response could theoretically be in any order
+    // but most terminals will reply in a FIFO order
+    if response.len() >= expected.len() && response[..expected.len()] == expected {
         return Ok(());
     }
 
