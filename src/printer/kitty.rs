@@ -62,7 +62,7 @@ fn check_kitty_support() -> KittySupport {
         if term.contains("kitty") || term.contains("ghostty") {
             let mut stdout = std::io::stdout();
             let stdin = Term::stdout();
-            if has_local_support(&mut stdout, &stdin).is_ok() {
+            if has_local_support(&stdin, &mut stdout).is_ok() {
                 return KittySupport::Local;
             }
 
@@ -73,7 +73,7 @@ fn check_kitty_support() -> KittySupport {
 }
 
 /// Query the terminal whether it can display an image from a file
-fn has_local_support(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
+fn has_local_support(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResult {
     // create a temp file that will hold a 1x1 image
     let x = image::RgbaImage::new(1, 1);
     let raw_img = x.as_raw();
@@ -300,7 +300,7 @@ mod tests {
         ];
         let test_stdin = TestKeys::new(&test_stdin_data);
 
-        has_local_support(&mut stdout, &test_stdin).unwrap();
+        has_local_support(&test_stdin, &mut stdout).unwrap();
         let result = std::str::from_utf8(&stdout).unwrap();
 
         // assert_eq!(result, "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c");
