@@ -134,13 +134,14 @@ fn has_remote_support(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResul
     // determine if we had the "primary device attributes" reply, as otherwise "c" *could* be part of another query response beforehand
     let mut had_pda: bool = false;
 
-    // assign it once instead of having to allocate a vector with static content in each loop
-    // this sequenece is also called "CSI ? 6" in "Terminal Response" at https://vt100.net/docs/vt510-rm/DA1.html
-    let pda_seq = Key::UnknownEscSeq(['[', '?', '6'].into());
-
     while let Ok(key) = stdin.read_key() {
-        if key == pda_seq {
-            had_pda = true;
+        // this sequenece is also called "CSI ? 6" in "Terminal Response" at https://vt100.net/docs/vt510-rm/DA1.html
+        // Though it seems the "6" (and "4") is not actually required if the vt is at a different level
+        // meaning if we test explicitly for "6" it would never exit
+        if let Key::UnknownEscSeq(esc_seq) = &key {
+            if esc_seq.starts_with(&['[', '?']) {
+                had_pda = true;
+            }
         }
 
         // The "primary device attributes" response will end with a "c" character
@@ -455,6 +456,30 @@ mod tests {
 
         assert!(result.starts_with("\x1b_Gi=31,s=1,v=1,a=q,t=t;"));
         assert!(result.ends_with("\x1b\\"));
+        assert!(test_response.reached_end());
+    }
+
+    #[test]
+    fn test_remote_support_tmux() {
+        // output collected on tmux 3.5_a (kitty & Konsole)
+
+        // test kitty protocol support
+        let mut stdout = Vec::new();
+
+        let test_data = [
+            Key::UnknownEscSeq(vec!['[', '?', '1']),
+            Key::Char(';'),
+            Key::Char('2'),
+            Key::Char(';'),
+            Key::Char('4'),
+            Key::Char('c'),
+        ];
+        let test_response = TestKeys::new(&test_data);
+
+        has_remote_support(&test_response, &mut stdout).unwrap_err();
+        let result = std::str::from_utf8(&stdout).unwrap();
+
+        assert_eq!(result, "\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\\x1b[c");
         assert!(test_response.reached_end());
     }
 
