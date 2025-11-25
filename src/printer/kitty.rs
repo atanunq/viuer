@@ -273,6 +273,10 @@ fn print_local(
                 .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
         )
     )?;
+    // Some shells like bash dont put the prompt on the next line if the process didnt newline itself
+    // which can cause the prompt to be after the image.
+    // See <https://github.com/atanunq/viuer/pull/90#discussion_r2557013728>
+    writeln!(stdout)?;
     stdout.flush()?;
 
     // prevent race condition of removing the file before the terminal is finished reading it.
@@ -319,8 +323,11 @@ fn print_remote(
         let m = if iter.peek().is_some() { 1 } else { 0 };
         write!(stdout, "\x1b_Gm={};{}\x1b\\", m, chunk)?;
     }
+    // Some shells like bash dont put the prompt on the next line if the process didnt newline itself
+    // which can cause the prompt to be after the image.
+    // See <https://github.com/atanunq/viuer/pull/90#discussion_r2557013728>}
+    writeln!(stdout)?;
     stdout.flush()?;
-
     Ok((w, h))
 }
 
@@ -365,7 +372,7 @@ mod tests {
         let result = std::str::from_utf8(&vec).unwrap();
 
         assert!(result.starts_with("\x1b[4;5H\x1b_Gf=32,s=40,v=25,c=40,r=13,a=T,t=t;"));
-        assert!(result.ends_with("\x1b\\\x1b[5n"));
+        assert!(result.ends_with("\x1b\\\n\x1b[5n"));
         assert!(test_response.reached_end());
     }
 
@@ -393,7 +400,7 @@ mod tests {
 
         assert_eq!(
             result,
-            "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,m=1;AAAAAAIEBgg=\x1b\\"
+            "\x1b[6;3H\x1b_Gf=32,a=T,t=d,s=1,v=2,c=1,r=1,m=1;AAAAAAIEBgg=\x1b\\\n"
         );
         assert!(test_response.reached_end());
     }
