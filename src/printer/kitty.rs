@@ -1,5 +1,6 @@
 use crate::error::{ViuError, ViuResult};
 use crate::printer::{adjust_offset, find_best_fit, Printer, ReadKey};
+use crate::utils::terminal_size;
 use crate::Config;
 use base64::{engine::general_purpose, Engine};
 use console::{Key, Term};
@@ -27,7 +28,7 @@ impl Printer for KittyPrinter {
         img: &image::DynamicImage,
         config: &Config,
     ) -> ViuResult<(u32, u32)> {
-        match get_kitty_support() {
+        let result = match get_kitty_support() {
             KittySupport::None => Err(ViuError::KittyNotSupported),
             KittySupport::Local => {
                 // print from file
@@ -37,7 +38,22 @@ impl Printer for KittyPrinter {
                 // print through escape codes
                 print_remote(stdin, stdout, img, config)
             }
+        };
+
+        // The cursor is pushed to the next line by Kitty if the image reaches the terminal's boundary.
+        // We must do it only if the image is smaller, otherwise we end up with a blank line.
+        // See <https://github.com/atanunq/viuer/pull/90#discussion_r2557013728>
+        //
+        // Could be done with a cursor check through `crossterm::cursor::position`,
+        // but that alone doesn't justify enabling the `events` feature.
+        if let Ok((w, _)) = result {
+            let (term_w, _) = terminal_size();
+            if config.x + (w as u16) < term_w {
+                writeln!(stdout)?;
+            }
         }
+
+        result
     }
 
     // TODO: guess_format() here in order to treat PNGs specially (f=100).
@@ -273,10 +289,6 @@ fn print_local(
                 .ok_or_else(|| ViuError::Io(Error::other("Could not convert path to &str")))?
         )
     )?;
-    // Some shells like bash dont put the prompt on the next line if the process didnt newline itself
-    // which can cause the prompt to be after the image.
-    // See <https://github.com/atanunq/viuer/pull/90#discussion_r2557013728>
-    writeln!(stdout)?;
     stdout.flush()?;
 
     // prevent race condition of removing the file before the terminal is finished reading it.
@@ -323,10 +335,6 @@ fn print_remote(
         let m = if iter.peek().is_some() { 1 } else { 0 };
         write!(stdout, "\x1b_Gm={};{}\x1b\\", m, chunk)?;
     }
-    // Some shells like bash dont put the prompt on the next line if the process didnt newline itself
-    // which can cause the prompt to be after the image.
-    // See <https://github.com/atanunq/viuer/pull/90#discussion_r2557013728>}
-    writeln!(stdout)?;
     stdout.flush()?;
     Ok((w, h))
 }
