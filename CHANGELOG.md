@@ -1,6 +1,8 @@
 ## next
 - Add `Konsole` as a available terminal for iterm2 images
 - Add `stdin` internal argument to make printer utils testable
+- Ignore Error in Kitty if the temporary file has been deleted by the terminal. Fixes `KittySupport::Local`
+- Check for Kitty support on terminals via protocol query, instead of static `TERM` environment variable checking
 
 ## 0.10.0
 - Add `icy_sixel` feature that uses a Rust implementation of Sixel
