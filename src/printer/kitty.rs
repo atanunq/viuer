@@ -109,7 +109,7 @@ fn close_tmp_file(temp_file: NamedTempFile) -> ViuResult {
 }
 
 /// Send & Wait for the DSR(Device Status Report) query.
-fn wait_for_dsr(stdout: &mut impl Write, stdin: &impl ReadKey) -> ViuResult {
+fn wait_for_dsr(stdin: &impl ReadKey, stdout: &mut impl Write) -> ViuResult {
     write!(stdout, "\x1b[5n")?;
     stdout.flush()?;
 
@@ -296,7 +296,7 @@ fn print_local(
     stdout.flush()?;
 
     // prevent race condition of removing the file before the terminal is finished reading it.
-    wait_for_dsr(stdout, stdin)?;
+    wait_for_dsr(stdin, stdout)?;
 
     close_tmp_file(temp_file)?;
 
