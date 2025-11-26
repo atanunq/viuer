@@ -38,27 +38,31 @@ impl Printer for KittyPrinter {
                 // print through escape codes
                 print_remote(stdin, stdout, img, config)
             }
-        };
+        }?;
 
-        // The cursor is pushed to the next line by Kitty if the image reaches the terminal's boundary.
-        // We must do it only if the image is smaller, otherwise we end up with a blank line.
-        // See <https://github.com/atanunq/viuer/pull/90#discussion_r2557013728>
-        //
-        // Could be done with a cursor check through `crossterm::cursor::position`,
-        // but that alone doesn't justify enabling the `events` feature.
-        if let Ok((w, _)) = result {
-            let (term_w, _) = terminal_size();
-            if config.x + (w as u16) < term_w {
-                writeln!(stdout)?;
-            }
-        }
+        print_newline(stdout, config, result.0)?;
 
-        result
+        Ok(result)
     }
 
     // TODO: guess_format() here in order to treat PNGs specially (f=100).
     // Also, maybe get channel count and use f=24 or f=32 accordingly.
     // fn print_from_file(&self, filename: &str, config: &Config) -> ViuResult<(u32, u32)> {}
+}
+
+/// The cursor is pushed to the next line by Kitty if the image reaches the terminal's boundary.
+/// We must do it only if the image is smaller, otherwise we end up with a blank line.
+/// See <https://github.com/atanunq/viuer/pull/90#discussion_r2557013728>
+///
+/// Could be done with a cursor check through `crossterm::cursor::position`,
+/// but that alone doesn't justify enabling the `events` feature.
+fn print_newline(stdout: &mut impl Write, config: &Config, width: u32) -> ViuResult {
+    let (term_w, _) = terminal_size();
+    if config.x + (width as u16) < term_w {
+        writeln!(stdout)?;
+    }
+
+    Ok(())
 }
 
 #[derive(PartialEq, Eq, Copy, Clone)]
