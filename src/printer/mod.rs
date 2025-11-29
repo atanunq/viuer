@@ -123,8 +123,13 @@ impl Printer for PrinterType {
 
 /// Resize a [image::DynamicImage] so that it fits within optional width and height bounds.
 /// If none are provided, terminal size is used instead.
-pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> DynamicImage {
-    let (w, h) = find_best_fit(img, width, height);
+pub fn resize(
+    img: &DynamicImage,
+    width: Option<u32>,
+    height: Option<u32>,
+    preserve_aspect_ratio: bool,
+) -> DynamicImage {
+    let (w, h) = find_best_fit(img, width, height, preserve_aspect_ratio);
 
     // find_best_fit returns values in terminal cells. Hence, we multiply by two
     // because a 5x10 image can fit in 5x5 cells. However, a 5x9 image will also
@@ -155,7 +160,12 @@ pub fn resize(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> Dy
 /// assert_eq!(w, 80);
 /// assert_eq!(h, 20);
 //TODO: it might make more sense to change signiture from img to (width, height)
-fn find_best_fit(img: &DynamicImage, width: Option<u32>, height: Option<u32>) -> (u32, u32) {
+fn find_best_fit(
+    img: &DynamicImage,
+    width: Option<u32>,
+    height: Option<u32>,
+    preserve_aspect_ratio: bool,
+) -> (u32, u32) {
     let (img_width, img_height) = img.dimensions();
 
     // Match user's width and height preferences
@@ -174,7 +184,10 @@ fn find_best_fit(img: &DynamicImage, width: Option<u32>, height: Option<u32>) ->
         (Some(w), None) => fit_dimensions(img_width, img_height, w, img_height),
         (None, Some(h)) => fit_dimensions(img_width, img_height, img_width, h),
 
-        // Both width and height are specified, will resize to match exactly
+        // Both width and height are specified...
+        // ... will rsize with aspect_ratio
+        (Some(w), Some(h)) if preserve_aspect_ratio => fit_dimensions(img_width, img_height, w, h),
+        // ... will resize to match exactly
         (Some(w), Some(h)) => (w, h),
     }
 }
@@ -184,7 +197,7 @@ fn find_best_fit(img: &DynamicImage, width: Option<u32>, height: Option<u32>) ->
 /// bounds, they will be returned unmodified.
 ///
 /// Note: input bounds are meant to hold dimensions of a terminal, where the height of a cell is
-/// twice it's width. It is best illustrated in an example:
+/// **twice** it's width. It is best illustrated in an example:
 ///
 /// Trying to fit a 100x100 image in 40x15 terminal cells. The best fit, while having an aspect
 /// ratio of 1:1, would be to use all of the available height, 15, which is
@@ -283,12 +296,12 @@ mod tests {
         let height = None;
 
         let img = resize_get_large_test_image();
-        let new_img = resize(&img, width, height);
+        let new_img = resize(&img, width, height, false);
         assert_eq!(new_img.width(), 60);
         assert_eq!(new_img.height(), 45);
 
         let img = resize_get_small_test_image();
-        let new_img = resize(&img, width, height);
+        let new_img = resize(&img, width, height, false);
         assert_eq!(new_img.width(), 20);
         assert_eq!(new_img.height(), 10);
     }
@@ -299,12 +312,12 @@ mod tests {
         let height = None;
 
         let img = resize_get_large_test_image();
-        let new_img = resize(&img, width, height);
+        let new_img = resize(&img, width, height, false);
         assert_eq!(new_img.width(), 100);
         assert_eq!(new_img.height(), 77);
 
         let img = resize_get_small_test_image();
-        let new_img = resize(&img, width, height);
+        let new_img = resize(&img, width, height, false);
         assert_eq!(new_img.width(), 20);
         assert_eq!(new_img.height(), 10);
     }
@@ -315,13 +328,13 @@ mod tests {
         let mut height = Some(90);
 
         let img = resize_get_large_test_image();
-        let new_img = resize(&img, width, height);
+        let new_img = resize(&img, width, height, false);
         assert_eq!(new_img.width(), 225);
         assert_eq!(new_img.height(), 179);
 
         height = Some(4);
         let img = resize_get_small_test_image();
-        let new_img = resize(&img, width, height);
+        let new_img = resize(&img, width, height, false);
         assert_eq!(new_img.width(), 16);
         assert_eq!(new_img.height(), 8);
     }
@@ -332,12 +345,12 @@ mod tests {
         let height = Some(9);
 
         let img = resize_get_large_test_image();
-        let new_img = resize(&img, width, height);
+        let new_img = resize(&img, width, height, false);
         assert_eq!(new_img.width(), 15);
         assert_eq!(new_img.height(), 17);
 
         let img = resize_get_small_test_image();
-        let new_img = resize(&img, width, height);
+        let new_img = resize(&img, width, height, false);
         assert_eq!(new_img.width(), 15);
         assert_eq!(new_img.height(), 18);
     }
@@ -350,17 +363,17 @@ mod tests {
         let height = None;
 
         let img = best_fit_large_test_image();
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 57);
         assert_eq!(h, 23);
 
         let img = best_fit_small_test_image();
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 40);
         assert_eq!(h, 13);
 
         let img = DynamicImage::ImageRgba8(image::RgbaImage::new(160, 80));
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 80);
         assert_eq!(h, 20);
     }
@@ -371,22 +384,22 @@ mod tests {
         let height = None;
 
         let img = best_fit_large_test_image();
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 100);
         assert_eq!(h, 41);
 
         let img = best_fit_small_test_image();
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 40);
         assert_eq!(h, 13);
 
         let width = Some(6);
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 6);
         assert_eq!(h, 1);
 
         let width = Some(3);
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 3);
         assert_eq!(h, 1);
     }
@@ -397,13 +410,13 @@ mod tests {
         let height = Some(90);
 
         let img = best_fit_large_test_image();
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 216);
         assert_eq!(h, 90);
 
         let height = Some(4);
         let img = best_fit_small_test_image();
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 12);
         assert_eq!(h, 4);
     }
@@ -414,14 +427,30 @@ mod tests {
         let height = Some(9);
 
         let img = best_fit_large_test_image();
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 15);
         assert_eq!(h, 9);
 
         let img = best_fit_small_test_image();
-        let (w, h) = find_best_fit(&img, width, height);
+        let (w, h) = find_best_fit(&img, width, height, false);
         assert_eq!(w, 15);
         assert_eq!(h, 9);
+    }
+
+    #[test]
+    fn find_best_fit_some_some_apect_ratio() {
+        let width = Some(15);
+        let height = Some(9);
+
+        let img = best_fit_large_test_image();
+        let (w, h) = find_best_fit(&img, width, height, true);
+        assert_eq!(w, 15);
+        assert_eq!(h, 6);
+
+        let img = best_fit_small_test_image();
+        let (w, h) = find_best_fit(&img, width, height, true);
+        assert_eq!(w, 15);
+        assert_eq!(h, 4);
     }
 
     #[test]
