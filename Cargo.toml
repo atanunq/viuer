@@ -1,6 +1,6 @@
 [package]
 name = "viuer"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["Atanas Yankov <atanas.yankov98@gmail.com>"]
 edition = "2021"
 description = "Display images in the terminal"
@@ -18,7 +18,7 @@ resolver = "2"
 [dependencies]
 ansi_colours = "1"
 base64 = "0.22"
-console = { version = "0.15", default-features = false }
+console = { version = "0.16", default-features = false, features = ["std"] }
 crossterm = { version = "0.29", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png"] }
 tempfile = "3"
